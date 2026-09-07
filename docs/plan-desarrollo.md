@@ -3575,6 +3575,51 @@ en Cuenta y acceso entrega el enlace por WhatsApp sin pasar por el correo.
 
 ---
 
+## Fase 11 — Cosas menores pendientes (2026-09-07)
+
+### [ ] UI-2 · Las infografías de ayuda todavía usan el coral viejo
+
+```
+QUÉ ES. Diez SVG de public/ayuda/infografias/ pintan con #EF5554, que es el coral que se
+retiró de la marca justamente por contraste — contrast.test.ts lo deja escrito: "blanco
+sobre el coral viejo no pasaba, y por eso se cambió". El coral vigente es #D63E3D
+(--color-coral en globals.css).
+
+POR QUÉ NO ES URGENTE, y por qué igual hay que hacerlo. En esos diez el color es
+DECORATIVO —puntos de viñeta, subrayados bajo los títulos, flechas— y lo decorativo está
+exento de AA, así que hoy no hay una falla de accesibilidad. Lo que sí hay es una
+inconsistencia visible: la ayuda se ve de un rojo distinto al resto del sistema.
+
+EL RIESGO REAL es el de al lado: en check-in-de-una-charla.svg el mismo tono se había usado
+de FONDO de un chip con texto blanco encima, y ahí sí fallaba — 3.44:1 medido. Ese ya se
+arregló (commit 92da272f). Cualquier infografía nueva que use el tono viejo como fondo de
+texto repite el problema.
+
+CÓMO HACERLO. Un sed de #EF5554 → #D63E3D sobre los diez archivos, y DESPUÉS revisar uno por
+uno si algún texto quedó encima de un relleno coral. Los pares no se estiman: se miden con
+contrastRatio de src/lib/contrast.ts, igual que se hizo en 92da272f.
+
+ARCHIVOS: resolver-una-reubicacion, ruta-de-un-pago, mapa-de-roles, becas-y-cupones,
+ciclo-grupo-estudio, como-me-matriculo, registrar-un-estudio-externo, mi-perfil,
+inscribirme-a-un-evento, cierre-de-grupo.
+```
+
+### [ ] EVE-8 · Cinco sedes de charla están marcadas como zona, no como sede
+
+```
+QUÉ ES. Cartago, Liberia, Alajuela, Potrero y Pérez Zeledón existen en el catálogo `sedes`
+con su día, hora y grupo de edad correctos, pero con is_zone = true. Se descubrió al crear
+las 14 charlas recurrentes (commit a706fb24): no se duplicaron, se usaron como estaban.
+
+POR QUÉ NO SE ARREGLÓ AHÍ MISMO. Cambiar la marca toca los filtros por zona de otras
+pantallas, y no era el alcance de esa tarea. Hay que ver qué consulta cada filtro antes de
+voltear el flag, no solo correr el UPDATE.
+
+DATO RELACIONADO que ya se resolvió: la lista de charlas decía que Pérez Zeledón era jueves
+y el catálogo decía miércoles. El catálogo tenía razón; la serie se movió en 5f7df959.
+```
+
+
 ## Notas para la ejecución en Claude Code
 
 - Un punto por sesión/PR. Pegar el prompt tal cual y pedir además: correr `tsc --noEmit`,
