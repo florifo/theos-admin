@@ -71,7 +71,7 @@ const CHARLAS: Array<{
   { titulo: 'Charla Alajuela Jueves',       sede: 'alajuela',            dia: 'THU', hora: '19:30', edad: '+18' },
   { titulo: 'Charla Guápiles Miércoles',    sede: 'guapiles',            dia: 'WED', hora: '19:00', edad: '+18' },
   { titulo: 'Charla Potrero Jueves',        sede: 'potrero',             dia: 'THU', hora: '19:30', edad: '+18' },
-  { titulo: 'Charla Pérez Zeledón Jueves',  sede: 'perez-zeledon',       dia: 'THU', hora: '19:00', edad: '+18' },
+  { titulo: 'Charla Pérez Zeledón Miércoles', sede: 'perez-zeledon',      dia: 'WED', hora: '19:00', edad: '+18' },
   { titulo: 'Charla Madrid Domingo',        sede: 'madrid',              dia: 'SUN', hora: '11:30', edad: 'Adultos', youth: true, currency: 'EUR', nota: 'Hora de Madrid.' },
   { titulo: 'Charla Madrid Home Jueves',    sede: 'madrid-home',         dia: 'THU', hora: '20:30', edad: '18–32', currency: 'EUR', nota: 'Reunión en casa. Hora de Madrid.' },
 ]
