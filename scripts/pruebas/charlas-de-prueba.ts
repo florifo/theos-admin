@@ -7,8 +7,7 @@
  *   aplicar:  ... --aplicar
  *   borrar:   ... --borrar
  *
- * Arrancan una hora antes de AHORA y terminan tres horas después, así que caen
- * en la ventana de check-in del día como "En curso" desde el primer momento.
+ * Arrancan hoy a las 6:00pm y terminan a las 8:00pm, hora de Costa Rica.
  */
 import { Client } from 'pg'
 import { readFileSync } from 'fs'
@@ -56,8 +55,17 @@ async function main() {
     await c.end(); return
   }
 
-  const inicio = new Date(Date.now() - 3600_000).toISOString()
-  const fin = new Date(Date.now() + 3 * 3600_000).toISOString()
+  // Hoy en Costa Rica, 6:00pm–8:00pm. El día se saca del reloj CR, no del UTC:
+  // pasadas las 6pm CR en UTC ya es mañana y el evento caería fuera del día.
+  const hoyCR = new Date(Date.now() - 6 * 3600_000).toISOString().slice(0, 10)
+  // 18:00 CR = 24:00 UTC del mismo día, que no es una hora válida: hay que dejar
+  // que Date.UTC ruede al día siguiente en vez de armar la cadena a mano.
+  const enUTC = (horaCR: number) => new Date(Date.UTC(
+    Number(hoyCR.slice(0, 4)), Number(hoyCR.slice(5, 7)) - 1, Number(hoyCR.slice(8, 10)),
+    horaCR + 6, 0, 0,
+  )).toISOString()
+  const inicio = enUTC(18)
+  const fin = enUTC(20)
   const { rows: sede } = await c.query<{ id: string; name: string }>(
     `select id, name from sedes where code = 'pedregal-miercoles' limit 1`)
 
