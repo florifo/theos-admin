@@ -730,23 +730,40 @@ export type UserAccessRow = {
 /** Miembros que tienen al menos un rol asignado en member_roles (gestión de accesos). */
 export async function getUserAccess(): Promise<UserAccessRow[]> {
   const supabase = createAdminClient()
-  const [{ data, error }, { data: grantsData }] = await Promise.all([
-    supabase
-      .from('member_roles')
-      .select('member_id, role, is_active, origen, granted_at, member:members!member_roles_member_id_fkey(first_name, last_name, email)')
-      .order('granted_at', { ascending: false }),
-    supabase.from('member_role_position_grants').select('member_id, role'),
-  ])
-  if (error) throw error
 
-  const rows = (data ?? []) as Array<{
+  type RoleRow = {
     member_id: string
     role: string
     is_active: boolean
     origen: string
     granted_at: string | null
     member: { first_name: string | null; last_name: string | null; email: string | null } | null
-  }>
+  }
+
+  // PostgREST corta en 1000 filas. member_roles ya pasa de eso, así que sin
+  // paginar la pantalla de Accesos perdía en silencio los otorgamientos más
+  // viejos: 205 personas con rol activo no aparecían del todo y a otras se les
+  // caía alguno. Se pagina hasta agotar; el orden por granted_at se mantiene
+  // dentro de cada página y no importa, porque después se agrupa por miembro.
+  const rows: RoleRow[] = []
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await supabase
+      .from('member_roles')
+      .select('member_id, role, is_active, origen, granted_at, member:members!member_roles_member_id_fkey(first_name, last_name, email)')
+      .order('granted_at', { ascending: false })
+      // Desempate estable por id: sin él, dos filas con el mismo granted_at
+      // (los otorgamientos masivos comparten timestamp) pueden repetirse en una
+      // página y faltar en otra.
+      .order('id', { ascending: true })
+      .range(from, from + 999)
+    if (error) throw error
+    const page = (data ?? []) as unknown as RoleRow[]
+    rows.push(...page)
+    if (page.length < 1000) break
+  }
+
+  const { data: grantsData } = await supabase
+    .from('member_role_position_grants').select('member_id, role')
 
   // Cantidad de puestos que respaldan cada (member_id, role).
   const grantCounts = new Map<string, number>()
