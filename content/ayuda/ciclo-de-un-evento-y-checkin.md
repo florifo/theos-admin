@@ -39,8 +39,9 @@ Lo que más se olvida configurar:
 
 ## El check-in
 
-Se hace desde **Eventos → Check-in**, que muestra los eventos del día, o desde la ficha del
-evento. Hay tres formas de registrar: manual (buscando a la persona), por QR y por link.
+Se hace desde **Check-in**, un ítem propio del menú principal que abre directo los eventos
+del día, o desde la pestaña **Check-in** de la ficha del evento. Hay tres formas de
+registrar: manual (buscando a la persona), por QR y por link.
 
 Dos cosas que conviene saber:
 

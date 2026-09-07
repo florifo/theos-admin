@@ -1,18 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 970" role="img" aria-labelledby="t-ci d-ci" font-family="Arial, Helvetica, sans-serif">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 1470" role="img" aria-labelledby="t-ci d-ci" font-family="Arial, Helvetica, sans-serif">
   <title id="t-ci">Check-in de una charla</title>
-  <desc id="d-ci">Los cinco pasos para registrar la asistencia: elegir la charla del día, escanear el QR o buscar por nombre, y confirmar como participante. Con familia se registra a varios de una vez, cada quien a su destino.</desc>
+  <desc id="d-ci">Los cinco pasos para registrar la asistencia: abrir Check-in desde el menú principal, elegir la charla del día, escanear el QR o buscar por nombre, y confirmar como participante. Si la charla tiene subevento, el chip encendido decide a dónde va cada check-in, y con familia se registra a varios de una vez, cada quien a su destino.</desc>
 
-  <rect width="720" height="970" fill="#F6F5F2"/>
+  <rect width="720" height="1470" fill="#F6F5F2"/>
 
   <text x="48" y="66" font-size="30" font-weight="bold" fill="#161440">Check-in de una charla</text>
-  <rect x="48" y="80" width="60" height="4" rx="2" fill="#EF5554"/>
+  <rect x="48" y="80" width="60" height="4" rx="2" fill="#D63E3D"/>
   <text x="48" y="114" font-size="15" fill="#5B5975">Si alguien vino y no quedó registrado, para el sistema no vino.</text>
 
   <g font-size="16">
     <rect x="48" y="148" width="624" height="66" rx="14" fill="#FFFFFF" stroke="#E2E1DA"/>
     <circle cx="88" cy="181" r="18" fill="#161440"/>
     <text x="88" y="188" font-size="14" font-weight="bold" fill="#FFFFFF" text-anchor="middle">1</text>
-    <text x="122" y="188" fill="#161440">Entrá a <tspan font-weight="bold">Eventos</tspan> y tocá <tspan font-weight="bold">Check-in</tspan></text>
+    <text x="122" y="188" fill="#161440">Tocá <tspan font-weight="bold">Check-in</tspan> en el menú principal</text>
     <rect x="48" y="226" width="624" height="66" rx="14" fill="#FFFFFF" stroke="#E2E1DA"/>
     <circle cx="88" cy="259" r="18" fill="#161440"/>
     <text x="88" y="266" font-size="14" font-weight="bold" fill="#FFFFFF" text-anchor="middle">2</text>
@@ -31,23 +31,56 @@
     <text x="122" y="500" fill="#161440">Confirmá como <tspan font-weight="bold">Participante</tspan> — queda en la lista</text>
   </g>
 
-  <text x="48" y="582" font-size="20" font-weight="bold" fill="#161440">Bueno saber</text>
-  <rect x="48" y="594" width="44" height="4" rx="2" fill="#EF5554"/>
+  <text x="48" y="562" font-size="13" fill="#5B5975">También se llega desde la pestaña Check-in del evento, en el calendario.</text>
+
+  <text x="48" y="612" font-size="20" font-weight="bold" fill="#161440">Si la charla tiene subevento</text>
+  <rect x="48" y="624" width="44" height="4" rx="2" fill="#D63E3D"/>
 
   <g font-size="14.5">
-    <rect x="48" y="602" width="624" height="88" rx="14" fill="#FFFFFF" stroke="#E2E1DA"/>
-    <circle cx="82" cy="636" r="10" fill="#EF5554"/>
-    <text x="106" y="632" font-weight="bold" fill="#161440">¿Primera visita?</text>
-    <text x="106" y="654" fill="#5B5975">«Agregar persona nueva» la crea ahí mismo, sin salir del check-in.</text>
-    <rect x="48" y="702" width="624" height="88" rx="14" fill="#FFFFFF" stroke="#E2E1DA"/>
-    <circle cx="82" cy="736" r="10" fill="#EF5554"/>
-    <text x="106" y="732" font-weight="bold" fill="#161440">¿Viene con familia?</text>
-    <text x="106" y="754" fill="#5B5975">Se registran todos de una vez — el adulto al evento y el hijo al subevento.</text>
-    <rect x="48" y="802" width="624" height="88" rx="14" fill="#FFFFFF" stroke="#E2E1DA"/>
-    <circle cx="82" cy="836" r="10" fill="#EF5554"/>
-    <text x="106" y="832" font-weight="bold" fill="#161440">¿Te equivocaste?</text>
-    <text x="106" y="854" fill="#5B5975">El basurero elimina el check-in y se puede volver a registrar.</text>
+    <rect x="48" y="640" width="624" height="118" rx="14" fill="#FFFFFF" stroke="#E2E1DA"/>
+    <circle cx="82" cy="674" r="10" fill="#D63E3D"/>
+    <text x="106" y="670" font-weight="bold" fill="#161440">El chip encendido decide el destino</text>
+    <rect x="106" y="686" width="128" height="28" rx="14" fill="#D63E3D"/>
+    <text x="170" y="705" font-size="13" fill="#FFFFFF" text-anchor="middle">Evento general</text>
+    <rect x="242" y="686" width="72" height="28" rx="14" fill="#F0EFEA" stroke="#E2E1DA"/>
+    <text x="278" y="705" font-size="13" fill="#5B5975" text-anchor="middle">Youth</text>
+    <text x="106" y="740" fill="#5B5975">Manda a dónde va el próximo check-in, y qué lista y qué contador ves.</text>
+
+    <rect x="48" y="770" width="624" height="88" rx="14" fill="#FFFFFF" stroke="#E2E1DA"/>
+    <circle cx="82" cy="804" r="10" fill="#D63E3D"/>
+    <text x="106" y="800" font-weight="bold" fill="#161440">¿La familia se divide?</text>
+    <text x="106" y="822" fill="#5B5975">En la ventana de familia cada quien lleva su chip: la mamá al general, el hijo a Youth.</text>
+
+    <rect x="48" y="870" width="624" height="88" rx="14" fill="#FFFFFF" stroke="#E2E1DA"/>
+    <circle cx="82" cy="904" r="10" fill="#D63E3D"/>
+    <text x="106" y="900" font-weight="bold" fill="#161440">¿Lo registraste y desapareció?</text>
+    <text x="106" y="922" fill="#5B5975">Está en el otro destino. Cambiá de chip y ahí sale.</text>
+
+    <rect x="48" y="970" width="624" height="88" rx="14" fill="#FFFFFF" stroke="#E2E1DA"/>
+    <circle cx="82" cy="1004" r="10" fill="#D63E3D"/>
+    <text x="106" y="1000" font-weight="bold" fill="#161440">Un solo destino por persona</text>
+    <text x="106" y="1022" fill="#5B5975">Si ya tiene check-in, el sistema avisa y no lo mueve. Borralo y registralo de nuevo.</text>
   </g>
 
-  <text x="48" y="930" font-size="13" fill="#8B89A0">La ventana dura hasta 4 horas después del fin; para registros tardíos buscá el evento por nombre.</text>
+  <text x="48" y="1112" font-size="20" font-weight="bold" fill="#161440">Bueno saber</text>
+  <rect x="48" y="1124" width="44" height="4" rx="2" fill="#D63E3D"/>
+
+  <g font-size="14.5">
+    <rect x="48" y="1140" width="624" height="88" rx="14" fill="#FFFFFF" stroke="#E2E1DA"/>
+    <circle cx="82" cy="1174" r="10" fill="#D63E3D"/>
+    <text x="106" y="1170" font-weight="bold" fill="#161440">¿Primera visita?</text>
+    <text x="106" y="1192" fill="#5B5975">«Agregar persona nueva» la crea ahí mismo, sin salir del check-in.</text>
+
+    <rect x="48" y="1240" width="624" height="88" rx="14" fill="#FFFFFF" stroke="#E2E1DA"/>
+    <circle cx="82" cy="1274" r="10" fill="#D63E3D"/>
+    <text x="106" y="1270" font-weight="bold" fill="#161440">¿Viene con familia?</text>
+    <text x="106" y="1292" fill="#5B5975">Se registran todos de una vez, con un solo botón.</text>
+
+    <rect x="48" y="1340" width="624" height="88" rx="14" fill="#FFFFFF" stroke="#E2E1DA"/>
+    <circle cx="82" cy="1374" r="10" fill="#D63E3D"/>
+    <text x="106" y="1370" font-weight="bold" fill="#161440">¿Te equivocaste?</text>
+    <text x="106" y="1392" fill="#5B5975">El basurero elimina el check-in y se puede volver a registrar.</text>
+  </g>
+
+  <text x="48" y="1452" font-size="13" fill="#5B5975">La ventana dura hasta 4 horas después del fin; para registros tardíos buscá el evento por nombre.</text>
 </svg>
