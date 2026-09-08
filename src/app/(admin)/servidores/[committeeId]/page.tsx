@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { filtrarServidores, type FiltroEstado } from '@/lib/servers/committee-filter'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { CommitteeServer, CommitteeGoal, CommitteeData } from '@/types/server'
@@ -26,7 +27,7 @@ import {
 } from './_components/CommitteeModals'
 
 type Tab = 'miembros' | 'vacantes' | 'metas' | 'estudios'
-type StatusFilter = 'active' | 'inactive' | 'all'
+type StatusFilter = FiltroEstado
 type DisconnectReason = 'renuncia' | 'cambio' | 'fin-periodo' | 'otro'
 
 export default function CommitteeDetailPage() {
@@ -110,12 +111,10 @@ export default function CommitteeDetailPage() {
     [committee]
   )
 
+  // La MISMA lista alimenta la tabla y el export (ver committee-filter.ts: eran
+  // dos expresiones distintas y se desalinearon).
   const displayedMembers = useMemo(
-    () => allCommitteeMembers.filter(m => {
-      const matchSearch = m.name.toLowerCase().includes(search.toLowerCase())
-      const matchStatus = statusFilter === 'all' || m.status === statusFilter
-      return matchSearch && matchStatus
-    }),
+    () => filtrarServidores(allCommitteeMembers, { search, status: statusFilter }),
     [allCommitteeMembers, search, statusFilter]
   )
 
