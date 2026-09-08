@@ -45,11 +45,15 @@ describe('withBaseRole', () => {
     }
   })
 
-  it('los roles administrativos NO caen en su perfil por llevar el rol base', () => {
-    // El riesgo del cambio: landsOnProfile exige que TODOS sean de perfil.
+  it('el rol base no le quita el dashboard a quien lo tiene', () => {
+    // Esto probaba que agregar 'miembro' por debajo no tumbara el dashboard.
+    // Sigue siendo cierto, pero la lista cambió el 2026-09-08: ahora el
+    // dashboard es SOLO de reportes, dirección y admin, así que
+    // encargado_eventos —que antes lo tenía por descarte— ya no.
     expect(landsOnProfile(withBaseRole(['admin']))).toBe(false)
-    expect(landsOnProfile(withBaseRole(['encargado_eventos']))).toBe(false)
-    // y los que sí tienen su casa en el perfil siguen igual
+    expect(landsOnProfile(withBaseRole(['direccion']))).toBe(false)
+    expect(landsOnProfile(withBaseRole(['reportes']))).toBe(false)
+    expect(landsOnProfile(withBaseRole(['encargado_eventos']))).toBe(true)
     expect(landsOnProfile(withBaseRole(['dirigente']))).toBe(true)
   })
 
