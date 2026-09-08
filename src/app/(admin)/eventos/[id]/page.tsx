@@ -27,6 +27,7 @@ import {
 } from '@/lib/events/detail-access'
 import type { EventEligibilityResult } from '@/lib/events/eligibility'
 import { CompartirInscripcion } from '@/components/events/CompartirInscripcion'
+import { contarPersonasNuevas } from '@/lib/events/personas-nuevas'
 import { EventRegistrationsTab } from './_components/EventRegistrationsTab'
 import { EventCheckinTab } from './_components/EventCheckinTab'
 import { EventServersTab } from './_components/EventServersTab'
@@ -498,6 +499,9 @@ export default function EventoDetailPage({ params }: { params: Promise<{ id: str
   }
 
   const arcPct = attendanceRate / 100
+  // Personas cuya ficha se creó el mismo día del evento: las que vinieron por
+  // primera vez y se registraron ahí mismo desde el check-in.
+  const nuevos = contarPersonasNuevas(event.checkins, event.start_at)
   const circumference = 2 * Math.PI * 40
 
   return (
@@ -738,6 +742,43 @@ export default function EventoDetailPage({ params }: { params: Promise<{ id: str
               </p>
             </div>
 
+            {/* Personas nuevas: ficha creada el mismo día del evento */}
+            <div className="rounded-2xl p-5 bg-surface-card shadow-[var(--shadow-md)]">
+              <p className="text-[11px] tracking-widest uppercase text-navy-light/80 mb-3 font-display">
+                Personas nuevas
+              </p>
+              <div className="flex items-baseline gap-3">
+                <p className="text-4xl font-extrabold text-navy tabular-nums font-display">
+                  {nuevos.nuevas}
+                </p>
+                {nuevos.conFicha > 0 && (
+                  <p className="text-lg font-semibold text-teal-deep tabular-nums font-body">
+                    {nuevos.porcentaje}%
+                  </p>
+                )}
+              </div>
+              <p className="text-[13px] text-navy-light/80 mt-2 font-body">
+                {nuevos.conFicha === 0
+                  ? 'Todavía no hay asistencia registrada.'
+                  : `de ${nuevos.conFicha} asistentes con ficha, se les creó el perfil ese mismo día`}
+              </p>
+              {nuevos.nuevas > 0 && (
+                <div className="mt-4 flex flex-wrap gap-1.5">
+                  {event.checkins
+                    .filter(c => c.member_created_at &&
+                      contarPersonasNuevas([c], event.start_at).nuevas === 1)
+                    .map(c => (
+                      <span
+                        key={c.id}
+                        className="rounded-full bg-surface-low px-2.5 py-1 text-[13px] text-navy-light font-body"
+                      >
+                        {c.member_name}
+                      </span>
+                    ))}
+                </div>
+              )}
+            </div>
+
             {/* Ingresos */}
             {event.requires_payment && event.payment_amount && (
               <div className="rounded-2xl p-5 bg-surface-card shadow-[var(--shadow-md)]">
@@ -780,11 +821,13 @@ export default function EventoDetailPage({ params }: { params: Promise<{ id: str
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => generateCSV(
-                ['Nombre', 'Tipo de asistencia', 'Fecha de check-in'],
+                ['Nombre', 'Tipo de asistencia', 'Fecha de check-in', '¿Primera vez?'],
                 event.checkins.map(c => [
                   c.member_name,
                   c.attendance_type === 'server' ? 'Servidor' : 'Participante',
                   c.checked_at ? new Date(c.checked_at).toLocaleString('es-CR') : '',
+                  !c.member_created_at ? ''
+                    : contarPersonasNuevas([c], event.start_at).nuevas === 1 ? 'Sí' : 'No',
                 ]),
                 `asistencia-${event.name}`,
               )}

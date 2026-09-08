@@ -43,6 +43,10 @@ export type EventCheckin = {
   attendance_type: AttendanceType
   sub_event_id: string | null
   checked_at: string
+  /** Cuándo se creó la ficha de la persona. Sirve para contar a quien vino por
+   *  primera vez (ficha creada el mismo día del evento). null en invitados sin
+   *  ficha, y en la LISTA de eventos, que no trae este dato. */
+  member_created_at?: string | null
 }
 
 export type VolunteerBooking = {

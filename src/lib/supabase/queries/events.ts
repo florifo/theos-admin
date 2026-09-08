@@ -82,7 +82,9 @@ export type DbEventEnriched = {
     member_id: string | null
     sub_event_id: string | null
     checked_in_at: string
-    member: { first_name: string; last_name: string } | null
+    /** `created_at` de la ficha: con él se cuenta a quién se le creó el perfil
+     *  el mismo día del evento (personas nuevas, en el tab de Reportes). */
+    member: { first_name: string; last_name: string; created_at: string | null } | null
     is_volunteer: boolean
   }>
   volunteers: Array<{
@@ -124,7 +126,7 @@ const SELECT = `
     member_id,
     sub_event_id,
     checked_in_at,
-    member:members(first_name, last_name)
+    member:members(first_name, last_name, created_at)
   ),
   volunteers:event_volunteers(
     member_id,
@@ -145,7 +147,7 @@ function normalize(row: Record<string, unknown>): DbEventEnriched {
     member_id: (c.member_id as string) ?? null,
     sub_event_id: (c.sub_event_id as string) ?? null,
     checked_in_at: c.checked_in_at as string,
-    member: (c.member as { first_name: string; last_name: string } | null) ?? null,
+    member: (c.member as DbEventEnriched['checkins'][number]['member']) ?? null,
     is_volunteer: c.member_id ? volunteerIds.has(c.member_id as string) : false,
   }))
 
