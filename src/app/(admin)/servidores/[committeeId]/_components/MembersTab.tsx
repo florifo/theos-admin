@@ -130,7 +130,13 @@ export function MembersTab({
             <tbody>
               {sortedMembers.map((m, idx) => (
                 <tr
-                  key={m.member_id}
+                  // La clave lleva el PUESTO además de la persona: quien sirve
+                  // en dos puestos del mismo comité produce dos filas, y con
+                  // solo el member_id las dos compartían clave. React entonces
+                  // no puede distinguirlas y al filtrar reutiliza las de antes:
+                  // se elegía un puesto y seguían apareciendo filas de otros.
+                  // En Comité Oración hay 50 personas con dos o más puestos.
+                  key={`${m.member_id}-${m.position_id}`}
                   className={cn('transition-colors', idx % 2 === 1 ? 'bg-surface-low/40' : '')}
                 >
                   <td className="px-4 py-3">
@@ -188,7 +194,7 @@ export function MembersTab({
         <ul className="md:hidden">
           {sortedMembers.map((m, i) => (
             <li
-              key={m.member_id}
+              key={`${m.member_id}-${m.position_id}`}
               className="flex items-center gap-3 px-4 py-3"
               style={i < sortedMembers.length - 1 ? { borderBottom: '1px solid var(--outline-variant)' } : {}}
             >

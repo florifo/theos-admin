@@ -54,7 +54,10 @@ function CommitteeCard({ committee, onClick }: { committee: CommitteeData; onCli
         <div className="flex -space-x-1.5">
           {avatars.map(m => (
             <div
-              key={m.member_id}
+              // Mismo cuidado que en la tabla del comité: quien sirve en dos
+              // puestos aparece dos veces y con solo el member_id compartirían
+              // clave.
+              key={`${m.member_id}-${m.position_id}`}
               className="h-7 w-7 rounded-full bg-navy flex items-center justify-center ring-2 ring-white"
               title={m.name}
             >
