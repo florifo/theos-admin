@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { zonaValida, etiquetaZona, aclaracionDeZona } from '@/lib/events/timezone'
 import { Image as ImageIcon, UserPlus, Check } from 'lucide-react'
 import type { RegistrationCta } from '@/lib/events/detail-access'
 import { CapacityBar } from '@/components/events/CapacityBar'
@@ -67,8 +68,15 @@ export function EventInfoTab({
     .map(id => adminCommittees.find(c => c.id === id)?.name)
     .filter(Boolean)
     .join(', ') || '—'
-  const startDate = new Date(event.start_at)
-  const endDate = new Date(event.end_at)
+  // Fecha y hora en la ZONA DEL EVENTO. Cuando no es Costa Rica se agrega una
+  // fila con la zona y la equivalencia — si no, quien administra desde acá lee
+  // "11:30" y asume que son las 11:30 de la mañana suyas.
+  const zona = zonaValida(event.timezone)
+  const enZona = (iso: string) => new Date(iso).toLocaleDateString('es-CR', {
+    day: 'numeric', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', timeZone: zona,
+  })
+  const aclaracionZona = aclaracionDeZona(event.timezone, event.start_at)
 
   return (
     <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
@@ -124,8 +132,9 @@ export function EventInfoTab({
           {[
             { label: 'Tipo', value: event.event_type },
             { label: 'Comité', value: committeeName },
-            { label: 'Inicio', value: startDate.toLocaleDateString('es-CR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) },
-            { label: 'Fin', value: endDate.toLocaleDateString('es-CR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) },
+            { label: 'Inicio', value: enZona(event.start_at) },
+            { label: 'Fin', value: enZona(event.end_at) },
+            ...(aclaracionZona ? [{ label: 'Zona horaria', value: `${etiquetaZona(zona)} — ${aclaracionZona}` }] : []),
             { label: 'Ubicación', value: event.location },
             { label: 'Virtual', value: event.is_virtual ? 'Sí' : 'No' },
             { label: 'Inscripción', value: event.requires_registration ? 'Requerida' : 'Libre' },
