@@ -67,6 +67,11 @@ export default function MatriculaPage() {
   const [selectedMember, setSelectedMember] = useState<{ id: string; name: string } | null>(null)
   const effectiveMemberId = selectedMember?.id ?? user?.member_id ?? null
   const effectiveName = selectedMember?.name ?? user?.name ?? 'miembro'
+  // A dónde lleva "ver el pago pendiente". Si el staff está matriculando a
+  // otra persona, a la deuda de ESA persona; si no, a la propia.
+  const deudaHref = selectedMember
+    ? `/miembros/${selectedMember.id}?tab=participacion&open=pagos`
+    : '/mis-pagos'
 
   const [activeFilter, setActiveFilter]   = useState<FilterTab>('all')
   const [search, setSearch]               = useState('')
@@ -422,8 +427,14 @@ export default function MatriculaPage() {
                 {selectedMember ? 'su' : 'tu'} avance siguen ahí. En cuanto confirmemos{' '}
                 {selectedMember ? 'su' : 'tu'} pago, los estudios se habilitan solos.
               </p>
+              {/* El destino depende de QUIÉN tiene la deuda. Estaba fijo en
+                  /mis-pagos, que son los pagos de quien está operando: el
+                  staff matriculando a otra persona leía "Ver SUS pagos
+                  pendientes", hacía clic y llegaba a una pantalla vacía —los
+                  suyos— mientras la deuda de la otra persona seguía ahí.
+                  Reportado con Valeria Astorga Calvo (2026-09-08). */}
               <Link
-                href="/mis-pagos"
+                href={deudaHref}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-coral px-4 py-2 text-sm font-medium text-white hover:bg-coral-deep transition-colors font-body"
               >
                 <CreditCard size={15} aria-hidden="true" />
@@ -578,6 +589,7 @@ export default function MatriculaPage() {
                         }
                         setConfirmModal({ group, study: result })
                       }}
+                      deudaHref={deudaHref}
                       onRequestScholarship={() => {
                         const plan = studyTypes.find(s => s.code === result.study_code)
                         if (plan?.plan_id) setScholarshipTarget({ entity_type: 'study_plan', id: plan.plan_id, name: plan.name })
@@ -850,7 +862,7 @@ function CommitmentRow({ met, label, info }: { met: boolean; label: string; info
 }
 
 function StudyCard({
-  result, stageMeta, expanded, onToggleExpand, onEnroll, onRequestScholarship,
+  result, stageMeta, expanded, onToggleExpand, onEnroll, onRequestScholarship, deudaHref,
 }: {
   result: EligibilityResult
   stageMeta: { label: string; bg: string; text: string }
@@ -858,6 +870,10 @@ function StudyCard({
   onToggleExpand: () => void
   onEnroll: (group: EligibleGroup) => void
   onRequestScholarship: () => void
+  /** A dónde mandar por la deuda: los pagos propios, o los de la persona que el
+   *  staff está matriculando. Llega resuelto de arriba porque acá no se sabe a
+   *  nombre de quién se está trabajando. */
+  deudaHref: string
 }) {
   const studyType = result.available_groups[0]
 
@@ -966,8 +982,16 @@ function StudyCard({
                     {r === DEBT_BLOCK_REASON && (
                       <>
                         {' — '}
-                        <Link href="/mis-pagos" className="text-coral underline decoration-dotted hover:text-coral-deep">
-                          pagalo acá y se habilita al confirmarlo
+                        {/* Mismo cuidado que el banner de arriba: si el staff
+                            está matriculando a otra persona, el enlace va a la
+                            deuda de ESA persona, no a la suya. */}
+                        <Link
+                          href={deudaHref}
+                          className="text-coral underline decoration-dotted hover:text-coral-deep"
+                        >
+                          {deudaHref === '/mis-pagos'
+                            ? 'pagalo acá y se habilita al confirmarlo'
+                            : 'ver su pago pendiente'}
                         </Link>
                       </>
                     )}
