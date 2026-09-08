@@ -23,7 +23,39 @@ const schema = z.object({
 
 const RESPUESTA_NEUTRAL = {
   ok: true,
-  message: 'Si ese correo tiene una cuenta, ya le mandamos el enlace. Revisá tu bandeja y la carpeta de spam.',
+  message: 'Si ese correo tiene una cuenta, ya le mandamos el enlace. Revisá tu bandeja y la carpeta de spam. '
+    + 'Si en unos minutos no llega, fijate que el correo esté bien escrito o escribinos a soporte@theosplace.org.',
+}
+
+/**
+ * Deja constancia de una petición que NO encontró a nadie.
+ *
+ * Por qué hace falta: la respuesta al usuario es neutral a propósito —no
+ * decimos si la cuenta existe—, y eso está bien, pero también significa que un
+ * correo mal escrito y un correo válido se ven EXACTAMENTE igual desde afuera y
+ * desde adentro. Caso real (Marco Leiva, 2026-09-08): reportó que no le llegaba
+ * el enlace, y no había forma de saber si había pedido con otra dirección, si
+ * el envío había fallado, o si nunca había pedido. Sin este registro la única
+ * respuesta posible es "no sabemos".
+ *
+ * Va a message_logs con status 'failed' porque es justo eso: un correo que
+ * debía salir y no salió. Best-effort — si el registro falla, la petición sigue.
+ */
+async function registrarSinDestinatario(identifier: string): Promise<void> {
+  try {
+    const db = createAdminClient() as unknown as {
+      from: (t: string) => { insert: (v: Record<string, unknown>) => Promise<{ error: unknown }> }
+    }
+    await db.from('message_logs').insert({
+      channel: 'email',
+      recipient: identifier,
+      subject: 'Enlace de contraseña — no se encontró a nadie con ese dato',
+      status: 'failed',
+      last_error: 'sin_miembro',
+    })
+  } catch (e) {
+    console.warn('registrarSinDestinatario:', e instanceof Error ? e.message : e)
+  }
 }
 
 export async function POST(req: NextRequest) {
@@ -72,7 +104,9 @@ export async function POST(req: NextRequest) {
       | undefined
 
     const email = member?.email?.trim()
-    if (email) {
+    if (!email) {
+      await registrarSinDestinatario(identifier)
+    } else {
       // El tipo (definir vs restablecer) lo resuelve sendPasswordLink: acá solo
       // va la pista, porque auth_user_id puede estar desincronizado.
       const res = await sendPasswordLink({
