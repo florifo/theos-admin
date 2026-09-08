@@ -15,7 +15,7 @@ import { DocumentCapture } from '@/components/members/DocumentCapture'
 import { Modal } from '@/components/shared/Modal'
 import { getInitials, toYmdLocal, formatMoney } from '@/lib/format'
 import { validarAltaDePersona } from '@/lib/members/alta-persona'
-import { normalizeCedula } from '@/lib/cedula'
+import { normalizeCedula, DOCUMENT_TYPES, DOCUMENT_TYPE_LABEL } from '@/lib/cedula'
 import { PageContainer } from '@/components/layout/PageContainer'
 
 // El escáner QR (zxing, ~100KB+) se carga solo cuando el usuario abre la cámara:
@@ -879,6 +879,7 @@ function NewPersonModal({ initialName, onClose, onCreated, onCheckedIn, persistC
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [cedula, setCedula] = useState('')
+  const [documentType, setDocumentType] = useState<string>('cedula')
   const [birthDate, setBirthDate] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -890,8 +891,10 @@ function NewPersonModal({ initialName, onClose, onCreated, onCheckedIn, persistC
   const [yaExiste, setYaExiste] = useState<{ id: string; name: string } | null>(null)
 
   const chequeo = validarAltaDePersona({
-    first_name: firstName, last_name: lastName, cedula, birth_date: birthDate,
+    first_name: firstName, last_name: lastName, cedula,
+    birth_date: birthDate, document_type: documentType,
   })
+  const esCedulaCR = documentType === 'cedula'
   const valid = chequeo.ok
 
   /** Al salir del campo: ¿esta cédula ya es de alguien? El lookup busca por
@@ -902,8 +905,12 @@ function NewPersonModal({ initialName, onClose, onCreated, onCheckedIn, persistC
     try {
       const res = await fetch(`/api/members/lookup?search=${encodeURIComponent(n)}&pageSize=5`)
       if (!res.ok) return
-      const d = await res.json() as { members?: Array<{ id: string; first_name: string; last_name: string; cedula?: string | null }> }
-      const hit = (d.members ?? []).find(m => normalizeCedula(String(m.cedula ?? '')) === n)
+      const d = await res.json() as { members?: Array<{ id: string; first_name: string; last_name: string; cedula?: string | null; document_type?: string | null }> }
+      // El documento dedupea por PAREJA (tipo, número) — INT-1: un pasaporte
+      // AB123456 y una cédula AB123456 no son la misma persona.
+      const hit = (d.members ?? []).find(m =>
+        normalizeCedula(String(m.cedula ?? '')).toUpperCase() === n.toUpperCase() &&
+        (m.document_type ?? 'cedula') === documentType)
       setYaExiste(hit ? { id: hit.id, name: `${hit.first_name} ${hit.last_name}`.trim() } : null)
     } catch {
       // Si la consulta falla no se frena el alta: el POST /api/members igual
@@ -938,6 +945,7 @@ function NewPersonModal({ initialName, onClose, onCreated, onCheckedIn, persistC
         phone: phone.trim() || null,
         email: email.trim() || null,
         cedula: cedula.trim() || null,
+        document_type: documentType,
         birth_date: birthDate || null,
         send_invite: !!email.trim(),
       })
@@ -960,6 +968,7 @@ function NewPersonModal({ initialName, onClose, onCreated, onCheckedIn, persistC
             first_name: d.first_name,
             last_name: d.last_name || lastName.trim(),
             cedula: d.cedula,
+            document_type: d.document_type,
             birth_date: d.birth_date,
             phone: d.phone,
             email: d.email,
@@ -1026,23 +1035,41 @@ function NewPersonModal({ initialName, onClose, onCreated, onCheckedIn, persistC
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <label htmlFor="np-cedula" className={labelCls} style={labelStyle}>
-              Cédula {chequeo.exigeCedula ? '*' : '(opcional para menores)'}
-            </label>
-            <input
-              id="np-cedula" className={fieldCls} style={fieldStyle}
-              value={cedula}
-              onChange={e => { setCedula(e.target.value); setYaExiste(null) }}
-              onBlur={buscarDuplicado}
-              placeholder="1-2345-6789"
-              aria-invalid={tocado && !!chequeo.errores.cedula}
-              aria-describedby={chequeo.errores.cedula ? 'np-cedula-err' : undefined}
-            />
+            <label htmlFor="np-doctype" className={labelCls} style={labelStyle}>Tipo de documento</label>
+            <select
+              id="np-doctype" className={fieldCls} style={fieldStyle}
+              value={documentType}
+              onChange={e => { setDocumentType(e.target.value); setYaExiste(null) }}
+            >
+              {DOCUMENT_TYPES.map(t => (
+                // El desplegable nativo lo pinta el sistema, no el modal: sin
+                // color propio, las opciones salen blanco sobre blanco.
+                <option key={t} value={t} style={{ color: '#161440', background: '#FFFFFF' }}>
+                  {DOCUMENT_TYPE_LABEL[t]}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="space-y-1">
             <label htmlFor="np-birth" className={labelCls} style={labelStyle}>Fecha de nacimiento</label>
             <input id="np-birth" type="date" className={fieldCls} style={fieldStyle} value={birthDate} onChange={e => setBirthDate(e.target.value)} />
           </div>
+        </div>
+
+        <div className="space-y-1">
+          <label htmlFor="np-cedula" className={labelCls} style={labelStyle}>
+            {esCedulaCR ? 'Cédula' : 'Número de documento'}
+            {chequeo.exigeCedula ? ' *' : ' (opcional para menores)'}
+          </label>
+          <input
+            id="np-cedula" className={fieldCls} style={fieldStyle}
+            value={cedula}
+            onChange={e => { setCedula(e.target.value); setYaExiste(null) }}
+            onBlur={buscarDuplicado}
+            placeholder={esCedulaCR ? '1-2345-6789' : documentType === 'dni_nie' ? '12345678Z' : 'AB123456'}
+            aria-invalid={tocado && !!chequeo.errores.cedula}
+            aria-describedby={chequeo.errores.cedula ? 'np-cedula-err' : undefined}
+          />
         </div>
 
         {tocado && chequeo.errores.cedula && (

@@ -304,6 +304,7 @@ export default function NuevoMiembroPage() {
             first_name: item.first_name,
             last_name: item.last_name || data.last_name,
             cedula: item.cedula,
+            document_type: item.document_type,
             birth_date: item.birth_date,
             phone: item.phone,
             email: item.email,

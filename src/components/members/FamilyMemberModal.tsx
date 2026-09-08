@@ -4,13 +4,14 @@ import { useState, useEffect } from 'react'
 import { Search, UserCheck, UserPlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { validarAltaDePersona } from '@/lib/members/alta-persona'
+import { DOCUMENT_TYPES, DOCUMENT_TYPE_LABEL } from '@/lib/cedula'
 import { calcAge } from '@/lib/format'
 import { Modal } from '@/components/shared/Modal'
 
 // Draft de un integrante de familia, reutilizable en alta de miembro y check-in.
 export type FamilyDraft =
   | { kind: 'linked'; member_id: string; first_name: string; last_name: string; cedula: string | null; relation: string }
-  | { kind: 'new'; first_name: string; last_name: string; cedula: string | null; birth_date: string | null; phone: string | null; email: string | null; relation: string }
+  | { kind: 'new'; first_name: string; last_name: string; cedula: string | null; document_type: string; birth_date: string | null; phone: string | null; email: string | null; relation: string }
 
 const RELATIONS = ['Cónyuge', 'Hijo/a', 'Padre', 'Madre', 'Hermano/a', 'Otro']
 
@@ -26,6 +27,7 @@ export function FamilyMemberModal({ defaultLastName = '', existingIds = [], onAd
 }) {
   const [mode, setMode] = useState<'search' | 'new'>('search')
   const [cedula, setCedula] = useState('')
+  const [documentType, setDocumentType] = useState<string>('cedula')
   const [searching, setSearching] = useState(false)
   const [found, setFound] = useState<Found | null>(null)
   const [searched, setSearched] = useState(false)
@@ -76,7 +78,7 @@ export function FamilyMemberModal({ defaultLastName = '', existingIds = [], onAd
     // salvo que la fecha de nacimiento diga que es menor de edad.
     const chequeo = validarAltaDePersona({
       first_name: firstName, last_name: lastName || defaultLastName,
-      cedula, birth_date: birthDate,
+      cedula, birth_date: birthDate, document_type: documentType,
     })
     if (!chequeo.ok) {
       setError(chequeo.errores.cedula ?? chequeo.errores.first_name ?? chequeo.errores.last_name ?? null)
@@ -87,6 +89,7 @@ export function FamilyMemberModal({ defaultLastName = '', existingIds = [], onAd
       first_name: firstName.trim(),
       last_name: lastName.trim(),
       cedula: cedula.trim() || null,
+      document_type: documentType,
       birth_date: birthDate || null,
       phone: phone.trim() || null,
       email: email.trim() || null,
@@ -174,12 +177,20 @@ export function FamilyMemberModal({ defaultLastName = '', existingIds = [], onAd
               <input value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Nombre" className={cn(inputCls, 'font-body')} />
               <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder={defaultLastName || 'Apellidos'} className={cn(inputCls, 'font-body')} />
             </div>
+            <select
+              value={documentType}
+              onChange={e => { setDocumentType(e.target.value); setError(null) }}
+              aria-label="Tipo de documento"
+              className={cn(inputCls, 'font-body')}
+            >
+              {DOCUMENT_TYPES.map(t => <option key={t} value={t}>{DOCUMENT_TYPE_LABEL[t]}</option>)}
+            </select>
             <div className="grid grid-cols-2 gap-3">
               <input
                 value={cedula}
                 onChange={e => { setCedula(e.target.value); setError(null) }}
-                placeholder={isMinor ? 'Cédula (opcional)' : 'Cédula *'}
-                aria-label={isMinor ? 'Cédula, opcional para menores' : 'Cédula, obligatoria'}
+                placeholder={`${documentType === 'cedula' ? 'Cédula' : 'Documento'}${isMinor ? ' (opcional)' : ' *'}`}
+                aria-label={isMinor ? 'Documento, opcional para menores' : 'Documento, obligatorio'}
                 className={cn(inputCls, 'font-mono')}
               />
               <div className="relative">

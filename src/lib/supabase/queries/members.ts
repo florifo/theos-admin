@@ -1036,7 +1036,7 @@ export type { DuplicateMember, DuplicatePair } from '@/lib/supabase/queries/memb
  *  sin paginar y con tope duro. Lo autoriza GET /api/members/lookup. */
 export async function searchMembersForLookup(
   search: string, limit = 8,
-): Promise<Array<{ id: string; first_name: string; last_name: string; cedula: string | null; email: string | null }>> {
+): Promise<Array<{ id: string; first_name: string; last_name: string; cedula: string | null; document_type: string | null; email: string | null }>> {
   const q = search.trim()
   if (q.length < 2) return []
   const supabase = createAdminClient()
@@ -1047,12 +1047,15 @@ export async function searchMembersForLookup(
   const { data, error } = await applyMemberSearch(
     supabase
       .from('members')
-      .select('id, first_name, last_name, cedula, email')
+      // document_type va incluido porque el documento dedupea por PAREJA
+      // (tipo, número) — INT-1: sin el tipo, un pasaporte y una cédula con el
+      // mismo número parecerían la misma persona.
+      .select('id, first_name, last_name, cedula, document_type, email')
       .eq('is_active', true),
     q,
   )
     .order('first_name')
     .limit(Math.min(limit, 20))
   if (error) throw error
-  return (data ?? []) as Array<{ id: string; first_name: string; last_name: string; cedula: string | null; email: string | null }>
+  return (data ?? []) as Array<{ id: string; first_name: string; last_name: string; cedula: string | null; document_type: string | null; email: string | null }>
 }
