@@ -38,10 +38,20 @@ const NOMBRE_POR_CODIGO: Record<string, string> = Object.fromEntries(
   STUDY_CATALOG.map(s => [s.code, s.name]),
 )
 
-function getSortValue(row: Record<string, unknown>, key: string): string {
+export function getSortValue(row: Record<string, unknown>, key: string): string {
   switch (key) {
-    case 'name':
-      return `${row.last_name ?? ''} ${row.first_name ?? ''}`.toLowerCase()
+    case 'name': {
+      // Dos formas de fila conviven: las del padrón traen first_name/last_name
+      // y se ordenan por APELLIDO, que es como se busca a alguien en una lista;
+      // las de servidores traen un solo campo `name` ya armado.
+      //
+      // BUG 2026-09-08: solo estaba la primera. En la tabla de un comité —donde
+      // las filas son `name`— la clave salía " " para TODAS, así que todas
+      // empataban y hacer clic en "Nombre" no movía nada. Se veía como que el
+      // ordenamiento no funcionaba, y no funcionaba.
+      const porApellido = `${row.last_name ?? ''} ${row.first_name ?? ''}`.trim()
+      return claveAlfabetica(porApellido || String(row.name ?? ''))
+    }
     case 'age':
       return typeof row.birth_date === 'string'
         ? String(new Date().getFullYear() - new Date(row.birth_date).getFullYear()).padStart(3, '0')
