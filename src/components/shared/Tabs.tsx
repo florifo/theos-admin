@@ -9,6 +9,17 @@ export type Tab = { key: string; label: string; count?: number }
  * Tabs de la app — única línea de diseño: fila con borde inferior, tab activo
  * con border-bottom coral de 2px y texto navy semibold. Para cambiar de sección
  * (no confundir con FilterChips, que son píldoras para filtrar listados).
+ *
+ * SE PARTEN EN VARIAS LÍNEAS, no se desplazan de lado. Antes era una fila con
+ * overflow-x-auto: en un celular entraban dos o tres tabs y el resto quedaba
+ * fuera de la pantalla, sin ninguna señal de que estuvieran ahí. Había que
+ * adivinar que se arrastraba. Reportado en el perfil de miembro, que llega a
+ * siete tabs — o sea cuatro invisibles.
+ *
+ * Envolver en vez de desplazar no necesita flechas, ni degradados, ni detectar
+ * el ancho: en pantalla ancha no se parte nada y se ve igual que antes, y en
+ * una angosta se ven todos de una. La única contra es que la barra crece de
+ * alto, y por eso quien la use pegada arriba tiene que mirar cómo le queda.
  */
 export function Tabs({
   tabs, active, onChange, className,
@@ -37,7 +48,7 @@ export function Tabs({
     <div
       role="tablist"
       className={cn(
-        'flex border-b border-outline overflow-x-auto whitespace-nowrap scroll-smooth [-webkit-overflow-scrolling:touch]',
+        'flex flex-wrap border-b border-outline',
         className,
       )}
     >

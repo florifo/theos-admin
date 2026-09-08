@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { Tabs } from '@/components/shared/Tabs'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { openSectionsFromParam } from '@/lib/members/profile-deeplink'
 import { notFound } from 'next/navigation'
@@ -8,7 +9,6 @@ import { useMember } from '@/hooks/useMember'
 import { useStudyPlans } from '@/hooks/useStudyPlans'
 import { useAuth } from '@/hooks/useAuth'
 import { STUDY_ADMIN_ROLES } from '@/lib/auth/roles'
-import { cn } from '@/lib/utils'
 import { Modal } from '@/components/shared/Modal'
 import { DeleteConfirmModal } from '@/components/shared/DeleteConfirmModal'
 import { MemberHeader } from './_components/MemberHeader'
@@ -273,29 +273,23 @@ export default function MiembroDetailPage() {
         onMerge={() => { setMenuOpen(false); setShowMerge(true) }}
       />
 
-      {/* ── Tab bar ── */}
-      <div
-        className="sticky top-0 z-10 rounded-2xl bg-surface-card overflow-x-auto shadow-[var(--shadow-md)]"
-      >
-        <div className="flex min-w-max">
-          {visibleTabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => changeTab(tab.id)}
-              className={cn(
-                'px-5 py-3.5 text-sm whitespace-nowrap transition-all relative font-body',
-                activeTab === tab.id
-                  ? 'text-navy font-medium'
-                  : 'text-navy-light/80 hover:text-navy'
-              )}
-            >
-              {tab.label}
-              {activeTab === tab.id && (
-                <span className="absolute bottom-0 left-4 right-4 h-0.5 bg-coral rounded-full" />
-              )}
-            </button>
-          ))}
-        </div>
+      {/* ── Tab bar ──
+          Pasa por el Tabs compartido en vez de una fila propia. Dos razones:
+          esta barra llega a SIETE tabs y con overflow-x-auto en un celular se
+          veían tres —los otros cuatro había que adivinar que estaban a la
+          derecha—, y además la versión propia no tenía ni role="tab" ni
+          navegación con flechas, que el compartido sí trae.
+
+          Deja de ser sticky en móvil: partida en dos o tres líneas, pegada
+          arriba se comía media pantalla. En sm+ va en una sola línea y se
+          queda pegada como antes. */}
+      <div className="sm:sticky sm:top-0 z-10 rounded-2xl bg-surface-card shadow-[var(--shadow-md)] px-2">
+        <Tabs
+          tabs={visibleTabs.map(t => ({ key: t.id, label: t.label }))}
+          active={activeTab}
+          onChange={changeTab}
+          className="border-b-0"
+        />
       </div>
 
       {/* ── Tab Content ── */}
