@@ -19,6 +19,17 @@ async function authorize(req: NextRequest): Promise<NextResponse | null> {
  * cerrado— vive en lib/studies/request-expiry.ts, con sus tests; acá solo se
  * leen los datos y se escribe el resultado.
  *
+ * CADA CUÁNTO. Tres veces al año, el 1° de febrero, junio y octubre: el mes
+ * siguiente al cierre de cada bloque (22 de enero, 22 de mayo, 13 de setiembre
+ * en 2026). No es diario porque solo hay algo que hacer cuando un bloque cierra
+ * — decisión del usuario, 2026-09-08.
+ *
+ * EL RIESGO DE ESO, para quien lo lea después: las fechas de los bloques son
+ * DATOS, y el cron son fechas fijas. Si un bloque se corre a otro mes, las
+ * solicitudes se quedan 'Abierta' hasta la próxima corrida. Cuando pase, o se
+ * ajusta el calendario del cron, o se dispara a mano: el endpoint acepta sesión
+ * de coordinación además del CRON_SECRET, justamente para eso.
+ *
  * Idempotente: una vez en 'vencida' deja de calificar, así que correrlo dos
  * veces no hace nada la segunda.
  */
