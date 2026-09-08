@@ -209,7 +209,7 @@ function PagosContent() {
       </div>
     )
   }
-  if (!canFinance && !canQueue) return <AccessDenied />
+  if (loaded && !canFinance && !canQueue) return <AccessDenied />
 
   return (
     <>

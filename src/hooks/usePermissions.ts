@@ -7,7 +7,7 @@ type Action = 'view' | 'create' | 'edit' | 'delete' | 'export'
 type Scope = 'own' | 'committee' | 'all'
 
 export function usePermissions() {
-  const { user } = useAuth()
+  const { user, loaded } = useAuth()
 
   function can(module: string, action: Action): boolean {
     if (!user?.roles?.length) return false
@@ -38,5 +38,13 @@ export function usePermissions() {
     return null
   }
 
-  return { can, getScope }
+  /**
+   * ¿Ya sabemos quién es? Hasta que no cargue la sesión, `can()` devuelve false
+   * para todo — no porque no tenga permiso, sino porque todavía no hay roles.
+   *
+   * Toda pantalla que muestre "Acceso restringido" TIENE que esperar esto. Sin
+   * eso, la pantalla se pinta denegada por un instante en CADA carga y después
+   * salta al contenido. Se veía hasta en el tutorial grabado del check-in.
+   */
+  return { can, getScope, loaded }
 }

@@ -15,7 +15,7 @@ type EntityOption = { id: string; name: string; amount: number }
 
 export default function NuevoCuponPage() {
   const router = useRouter()
-  const { can } = usePermissions()
+  const { can, loaded } = usePermissions()
   // usePublicEvents (no requiere permiso 'eventos'): finanzas/becas puede no
   // tener acceso al módulo de eventos, pero igual necesita listar destinos.
   const { events } = usePublicEvents()
@@ -89,7 +89,7 @@ export default function NuevoCuponPage() {
     }
   }
 
-  if (!can('becas', 'edit')) return <AccessDenied />
+  if (loaded && !can('becas', 'edit')) return <AccessDenied />
 
   return (
     <div className="space-y-6">

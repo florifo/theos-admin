@@ -35,7 +35,7 @@ const TIPO_FILTERS: { key: FolletoTipo | 'all'; label: string }[] = [
 
 
 export default function FolletosPage() {
-  const { can } = usePermissions()
+  const { can, loaded } = usePermissions()
   const canView = can('folletos', 'view')
   const canEdit = can('folletos', 'edit')
 
@@ -87,7 +87,7 @@ export default function FolletosPage() {
     } finally { setBusy(false) }
   }, [busy, sel, refetch])
 
-  if (!canView) return <AccessDenied />
+  if (loaded && !canView) return <AccessDenied />
 
   return (
     <div className="space-y-4">

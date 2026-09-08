@@ -54,7 +54,7 @@ function Tarjeta({ icon: Icon, title, sub, children }: {
 
 export default function FolletoDetallePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params)
-  const { can } = usePermissions()
+  const { can, loaded } = usePermissions()
   const puedeVer = can('folletos', 'view')
   const puedeEditar = can('folletos', 'edit')
   const toast = useToast()
@@ -105,7 +105,7 @@ export default function FolletoDetallePage({ params }: { params: Promise<{ id: s
     }
   }
 
-  if (!puedeVer) return <AccessDenied />
+  if (loaded && !puedeVer) return <AccessDenied />
 
   const next = d ? nextFolletoState(d.status) : null
 

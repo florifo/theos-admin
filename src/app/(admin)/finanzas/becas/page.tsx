@@ -49,7 +49,7 @@ const STATUS_BADGE: Record<string, string> = {
 }
 
 export default function BecasPage() {
-  const { can } = usePermissions()
+  const { can, loaded } = usePermissions()
   const canView = can('becas', 'view')
   const canEdit = can('becas', 'edit')
   const toast = useToast()
@@ -150,7 +150,7 @@ export default function BecasPage() {
 
   const [reviewTarget, setReviewTarget] = useState<FinanceRequest | null>(null)
 
-  if (!canView) return <AccessDenied />
+  if (loaded && !canView) return <AccessDenied />
 
   return (
     <div className="space-y-4">

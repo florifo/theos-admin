@@ -25,7 +25,7 @@ function checkinHref(ev: { id: string; start_at: string; occurrence_key?: string
 
 export default function CheckinPickerPage() {
   const router = useRouter()
-  const { can } = usePermissions()
+  const { can, loaded } = usePermissions()
   const canCheckin = can('eventos', 'edit') // encargado_eventos, direccion, admin
   const { events, loading } = useAllEventsLight()
   const [search, setSearch] = useState('')
@@ -45,7 +45,7 @@ export default function CheckinPickerPage() {
       .slice(0, 50)
   }, [q, today, events])
 
-  if (!canCheckin) return <AccessDenied />
+  if (loaded && !canCheckin) return <AccessDenied />
 
   return (
     <div className="space-y-5">

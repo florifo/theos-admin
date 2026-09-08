@@ -25,7 +25,7 @@ const fmt = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('es-
 const emptyForm = { nombre: '', anio: new Date().getFullYear(), fecha_apertura: '', fecha_cierre_matricula: '' }
 
 export default function BloquesPage() {
-  const { hasRole } = useAuth()
+  const { hasRole, loaded } = useAuth()
   const canManage = hasRole('coordinador_estudios', 'admin')
 
   const [rows, setRows] = useState<Bloque[]>([])
@@ -141,7 +141,7 @@ export default function BloquesPage() {
     } finally { setBusy(false) }
   }
 
-  if (!canManage) return <AccessDenied />
+  if (loaded && !canManage) return <AccessDenied />
 
   const milestones = form.fecha_apertura && form.fecha_cierre_matricula
     ? bloqueMilestones(form.fecha_apertura, form.fecha_cierre_matricula) : null
