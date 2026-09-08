@@ -1325,6 +1325,19 @@ export async function enrollMember(
      *  de audiencia del grupo, pero solo con este override explícito (la UI se
      *  lo confirma y queda en la bitácora — nunca silencioso). */
     allowRestrictionOverride?: boolean
+    /**
+     * Matricular SIN generar cobro, aunque el plan tenga costo.
+     *
+     * Es para las REUBICACIONES: cambiar de grupo no es matricularse de nuevo,
+     * la persona ya pagó donde estaba. enrollMember no puede deducirlo solo —
+     * solo ve el plan y su costo—, así que lo decide quien resuelve la
+     * solicitud (ver lib/studies/reubicacion-cobro.ts).
+     *
+     * Con esto la matrícula queda 'enrolled' de una y no se crea fila en
+     * payments. NO usar para saltarse un cobro real: para eso están las becas,
+     * que dejan rastro.
+     */
+    sinCobro?: boolean
   },
   // `status` puede ser 'pendiente_de_pago': con costo la matrícula no se
   // confirma hasta el comprobante (regla 2026-09-01). El caller lo usa para
@@ -1495,7 +1508,10 @@ export async function enrollMember(
     appliedScholarship = { id: resolved.id, kind: resolved.kind }
   }
   // El dirigente del grupo no paga la matrícula de su propio grupo.
-  const requiresPaymentFinal = requiresPayment && finalAmount > 0 && !esDirigenteDelGrupo
+  // `sinCobro` es el caso de la reubicación: se cambia de grupo, no se matricula
+  // de nuevo (ver el comentario de la opción).
+  const requiresPaymentFinal =
+    requiresPayment && finalAmount > 0 && !esDirigenteDelGrupo && !opts?.sinCobro
   // REGLA 2026-09-01: con costo, la matrícula nace PENDIENTE DE PAGO y solo se
   // confirma cuando entra el comprobante (approve_payment la pasa a 'enrolled').
   //

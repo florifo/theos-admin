@@ -18,6 +18,7 @@
  * autorización vive en requireRoles() de cada ruta API.
  */
 import { requestZones } from '@/lib/studies/request-prefs'
+import { reubicacionSinCobro } from '@/lib/studies/reubicacion-cobro'
 import { isStudyCommitteeArea } from '@/lib/studies/request-assignment'
 import {
   STUDY_REQUEST_NOTIFY_ROLES, selectStudyRequestRecipients,
@@ -509,8 +510,18 @@ export async function resolveStudyRequest(
     if (frErr) throw frErr
     folletoRequestId = (fr as { id: string }).id
   } else {
+    // Reubicación SIN folleto: no se cobra nada. Cambiar de grupo no es
+    // matricularse de nuevo — ya pagó en el grupo del que viene. enrollMember
+    // no puede saberlo (solo ve el plan y su costo), por eso se le dice.
+    //
+    // Sin esto le nacía un cobro de matrícula completo y la reubicación quedaba
+    // en 'pendiente_de_pago', o sea a medias, bloqueándole matricular otra cosa
+    // por "deuda". Le pasó a Valeria Astorga Calvo con un estudio que ya había
+    // aprobado (2026-09-08).
     const { enrollMember } = await import('./studies')
-    const result = await enrollMember(targetGroupId, row.member_id)
+    const result = await enrollMember(targetGroupId, row.member_id, undefined, {
+      sinCobro: reubicacionSinCobro({ wants_folleto: row.wants_folleto }),
+    })
     enrollmentId = result.enrollment_id
   }
 
