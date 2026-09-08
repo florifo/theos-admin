@@ -27,6 +27,6 @@ jobs:
         # new Date() impuro del dashboard de finanzas; el resto son
         # react-hooks/set-state-in-effect + purity/refs) — bajar este número
         # conforme se migren casos; NUNCA subirlo.
-        run: npx eslint src --max-warnings=94
+        run: npx eslint src --max-warnings=93
       - name: Tests
         run: npm test --if-present

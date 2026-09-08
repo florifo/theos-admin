@@ -135,7 +135,12 @@ export function StudyExceptionButton({ memberId, memberName = 'esta persona' }: 
   function toggle(key: string) {
     setWaived(prev => { const n = new Set(prev); if (n.has(key)) n.delete(key); else n.add(key); return n })
   }
-  function close() { setOpen(false); setPlanId(''); setWaiveAll(false); setWaived(new Set()); setReason(''); setError(null) }
+  // `repetir` también se limpia: si no, quedaba marcado de la vez anterior y la
+  // siguiente excepción salía con permiso para repetir sin que nadie lo pidiera.
+  function close() {
+    setOpen(false); setPlanId(''); setWaiveAll(false); setWaived(new Set())
+    setRepetir(false); setReason(''); setError(null)
+  }
 
   return (
     <>
@@ -217,6 +222,32 @@ export function StudyExceptionButton({ memberId, memberName = 'esta persona' }: 
                 ))}
               </div>
 
+              {/* "Repetir el curso" va APARTE de la lista de arriba, y no lo
+                  arrastra "eximir de todos": no es perdonar un requisito que
+                  falta, es habilitar un estudio que la persona YA aprobó.
+                  Mezclarlo haría que "todos los requisitos" habilitara repetir
+                  sin que nadie lo decidiera.
+
+                  Faltaba renderizarlo: el estado existía y el aviso de arriba
+                  mandaba a marcar «Repetir el curso», pero la casilla no estaba
+                  en la pantalla. Quedaba una instrucción imposible de seguir. */}
+              <div className="space-y-1.5 pt-1 border-t border-t-[var(--outline-variant)]">
+                <span className="text-[11px] tracking-widest uppercase text-navy-light/80 font-display">
+                  Estudios ya aprobados
+                </span>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox" className="accent-coral"
+                    checked={repetir}
+                    onChange={e => setRepetir(e.target.checked)}
+                  />
+                  <span className="text-[13px] text-navy font-body font-medium">Repetir el curso</span>
+                </label>
+                <p className="text-[13px] text-navy-light/80 font-body pl-6">
+                  Déjalo sin marcar salvo que ya lo haya completado y lo quiera llevar de nuevo.
+                </p>
+              </div>
+
               <div className="space-y-1">
                 <label htmlFor="exc-reason" className="text-[11px] tracking-widest uppercase text-navy-light/80 font-display">
                   Razón *
@@ -242,7 +273,11 @@ export function StudyExceptionButton({ memberId, memberName = 'esta persona' }: 
                 <button onClick={close} className="flex-1 rounded-full border border-[var(--outline-variant)] py-2.5 text-sm text-navy-light hover:bg-surface-low transition-colors font-body">Cerrar</button>
                 <button
                   onClick={submit}
-                  disabled={!planId || (!waiveAll && waived.size === 0) || !isValidExceptionReason(reason) || saving}
+                  // Con SOLO "repetir" ya hay algo que otorgar: es una excepción
+                  // válida por sí sola (la persona cumple todo, solo necesita
+                  // permiso para repetir). Antes el botón exigía además un
+                  // requisito eximido, así que ese caso no se podía guardar.
+                  disabled={!planId || (!waiveAll && waived.size === 0 && !repetir) || !isValidExceptionReason(reason) || saving}
                   className="flex-1 rounded-full bg-coral py-2.5 text-sm text-white hover:bg-coral-deep transition-colors disabled:opacity-40 font-body"
                 >
                   {saving ? 'Creando…' : 'Crear excepción'}
