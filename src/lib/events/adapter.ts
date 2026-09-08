@@ -75,6 +75,7 @@ export function toDomainEvent(db: DbEventEnriched): AdminEvent {
       sub_event_id: c.sub_event_id,
       checked_at: c.checked_in_at,
       member_created_at: c.member?.created_at ?? null,
+      member_first_checkin_at: c.member_first_checkin_at,
     })),
 
     volunteer_bookings: db.volunteers.map((v) => ({

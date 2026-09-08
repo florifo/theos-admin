@@ -86,6 +86,9 @@ export type DbEventEnriched = {
      *  el mismo día del evento (personas nuevas, en el tab de Reportes). */
     member: { first_name: string; last_name: string; created_at: string | null } | null
     is_volunteer: boolean
+    /** Primer check-in de esa persona en todo el sistema. Solo lo llena
+     *  getEventById; en la LISTA de eventos viene undefined. */
+    member_first_checkin_at?: string | null
   }>
   volunteers: Array<{
     member_id: string
@@ -277,6 +280,30 @@ export async function getEventById(id: string): Promise<DbEventEnriched | null> 
     for (const r of ev.registrations) {
       r.payment_in_review = enRevision.has(r.id)
       r.payment_in_review_id = enRevision.get(r.id) ?? null
+    }
+  }
+
+  // Primer check-in de cada asistente, para separar a quien vino por primera vez
+  // de quien ya había venido. Va por RPC y no por embed: PostgREST no agrega, y
+  // traerse todos los check-ins de estas personas para sacar un mínimo serían
+  // miles de filas por cada vez que se abre el detalle.
+  const memberIds = [...new Set(ev.checkins.map(c => c.member_id).filter((x): x is string => !!x))]
+  if (memberIds.length > 0) {
+    const { data: primeros, error: errPrimeros } = await supabase
+      .rpc('members_first_checkin', { p_member_ids: memberIds })
+    // Si el RPC falla, el detalle igual se muestra: el conteo de personas nuevas
+    // cae a la regla de la fecha sola (ver personas-nuevas.ts) en vez de romper
+    // toda la pantalla por una tarjeta.
+    if (errPrimeros) {
+      console.error('getEventById · members_first_checkin:', errPrimeros.message)
+    } else {
+      const porMiembro = new Map(
+        ((primeros ?? []) as Array<{ member_id: string; first_checkin_at: string }>)
+          .map(r => [r.member_id, r.first_checkin_at]),
+      )
+      for (const c of ev.checkins) {
+        c.member_first_checkin_at = c.member_id ? porMiembro.get(c.member_id) ?? null : null
+      }
     }
   }
   return ev

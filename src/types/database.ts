@@ -5183,6 +5183,13 @@ export type Database = {
         }[]
       }
       charla_sede_code: { Args: { p_title: string }; Returns: string }
+      // Agregado a mano (migración 20260907210000): los tipos generados no lo
+      // traen todavía. Primer check-in de cada miembro, para contar personas
+      // nuevas en el detalle de un evento.
+      members_first_checkin: {
+        Args: { p_member_ids: string[] }
+        Returns: { member_id: string; first_checkin_at: string }[]
+      }
       close_payment_ticket: {
         Args: { p_payment_id: string; p_reviewer?: string | null; p_reason?: string | null }
         Returns: boolean

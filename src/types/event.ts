@@ -47,6 +47,10 @@ export type EventCheckin = {
    *  primera vez (ficha creada el mismo día del evento). null en invitados sin
    *  ficha, y en la LISTA de eventos, que no trae este dato. */
   member_created_at?: string | null
+  /** Primer check-in de esa persona en todo el sistema. Con él, los días de
+   *  varias charlas no cuentan dos veces a la misma persona nueva. undefined
+   *  fuera del detalle del evento. */
+  member_first_checkin_at?: string | null
 }
 
 export type VolunteerBooking = {

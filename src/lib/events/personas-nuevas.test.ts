@@ -68,3 +68,57 @@ describe('contarPersonasNuevas', () => {
     expect(r.nuevas).toBe(0)
   })
 })
+
+// Los miércoles hay seis charlas a la vez. A alguien se le puede crear el perfil
+// en una y aparecer esa misma noche en otra: sin la segunda condición, las dos
+// se la anotarían como persona nueva.
+describe('varias charlas el mismo día', () => {
+  const FICHA = '2026-09-07T23:30:00.000Z'      // 5:30pm CR, en Cartago
+  const EN_CARTAGO = '2026-09-07T23:35:00.000Z' // su primer check-in
+  const EN_MERIDIANO = '2026-09-08T02:00:00.000Z' // 8:00pm CR, la segunda charla
+
+  it('la cuenta la charla donde llegó primero', () => {
+    expect(contarPersonasNuevas([{
+      member_id: 'a', member_created_at: FICHA,
+      checked_at: EN_CARTAGO, member_first_checkin_at: EN_CARTAGO,
+    }], CHARLA).nuevas).toBe(1)
+  })
+
+  it('NO la cuenta la segunda charla del mismo día', () => {
+    expect(contarPersonasNuevas([{
+      member_id: 'a', member_created_at: FICHA,
+      checked_at: EN_MERIDIANO, member_first_checkin_at: EN_CARTAGO,
+    }], CHARLA).nuevas).toBe(0)
+  })
+
+  it('sigue en el denominador aunque no cuente como nueva', () => {
+    const r = contarPersonasNuevas([{
+      member_id: 'a', member_created_at: FICHA,
+      checked_at: EN_MERIDIANO, member_first_checkin_at: EN_CARTAGO,
+    }], CHARLA)
+    expect(r).toEqual({ nuevas: 0, conFicha: 1, porcentaje: 0 })
+  })
+
+  it('quien ya venía de antes tampoco cuenta, aunque la ficha sea de hoy', () => {
+    expect(contarPersonasNuevas([{
+      member_id: 'a', member_created_at: FICHA,
+      checked_at: EN_CARTAGO, member_first_checkin_at: '2024-01-10T23:00:00.000Z',
+    }], CHARLA).nuevas).toBe(0)
+  })
+
+  it('el mismo instante escrito distinto sigue siendo el mismo instante', () => {
+    expect(contarPersonasNuevas([{
+      member_id: 'a', member_created_at: FICHA,
+      checked_at: '2026-09-07T23:35:00.000Z',
+      member_first_checkin_at: '2026-09-07T23:35:00+00:00',
+    }], CHARLA).nuevas).toBe(1)
+  })
+
+  // Degradación explícita: una pantalla que no pida el dato vuelve al conteo
+  // viejo en vez de dar 0 en silencio.
+  it('sin el dato del primer check-in, queda solo la regla de la fecha', () => {
+    expect(contarPersonasNuevas(
+      [{ member_id: 'a', member_created_at: FICHA }], CHARLA,
+    ).nuevas).toBe(1)
+  })
+})
