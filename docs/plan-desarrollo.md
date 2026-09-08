@@ -3620,6 +3620,39 @@ y el catálogo decía miércoles. El catálogo tenía razón; la serie se movió
 ```
 
 
+### [ ] DAT-1 · 65 fichas activas con fecha de nacimiento imposible
+
+```
+QUÉ ES. 65 personas activas tienen una fecha de nacimiento que no puede ser: 57
+dicen entre 1 y 3 años, 7 dicen menos de 1 año, y una —Adolfo Guiso Olivas—
+dice 1194. Lista completa en scripts/output/fechas-nacimiento-imposibles.csv,
+con las señales que permiten triarlas.
+
+POR QUÉ IMPORTA, y no es cosmético. La edad filtra grupos de estudio EN
+SILENCIO: los grupos con edad mínima simplemente no aparecen, sin ningún
+mensaje que lo explique. Una persona adulta con la fecha mal ve dos grupos
+donde hay cinco y nadie entiende por qué. Se descubrió persiguiendo justo ese
+síntoma (Carolina Retana, 2026-09-08). El filtro por edad esconde a propósito
+—es una decisión de producto—, y por eso mismo una fecha mala es invisible.
+
+CÓMO TRIARLAS, en orden de qué tan seguro es que la fecha sea el error:
+  ·  9 son SEGURO adultos: llevaron estudios, sirven en un comité o donan. Un
+     niño de 2 años no completó 8 estudios. Estas se corrigen sin dudar.
+  · 47 hicieron check-in en charlas. Es señal fuerte pero no prueba: a las
+     charlas también llega gente con sus hijos.
+  ·  1 solo tiene correo.
+  ·  8 no tienen ninguna señal: pueden ser niños de verdad y estar bien.
+
+QUÉ NO HACER: un UPDATE masivo. No hay de dónde sacar la fecha correcta —hay
+que preguntarle a la persona o mirar la cédula—. Lo que sí se puede hacer de
+una es el caso de 1194, que es un typo evidente.
+
+PREVENCIÓN, aparte de la limpieza: el alta no valida el rango. Conviene
+rechazar fechas futuras y edades fuera de un rango razonable en el mismo módulo
+que ya valida el alta (src/lib/members/alta-persona.ts, que ya calcula la edad).
+```
+
+
 ## Notas para la ejecución en Claude Code
 
 - Un punto por sesión/PR. Pegar el prompt tal cual y pedir además: correr `tsc --noEmit`,
