@@ -25,27 +25,39 @@ function norm(s: string): string {
   return s.normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toLowerCase()
 }
 
-/** Puestos de check-in/bienvenida en las sedes (comités "Sede X" bajo el área
- *  "Área Espiritual"). Confirmado 2026-07-15 contra el catálogo real (los
- *  títulos no incluyen "encargado de"/"mesa de info" literal). */
+/** Puestos de una sede que operan el evento: logística, anfitriones, bienvenida
+ *  e información. Los títulos salen del catálogo real (verificado 2026-09-07);
+ *  las variantes con y sin "de" conviven en la base y por eso están las dos. */
 const SEDE_EVENTOS_TITLES = new Set([
   'logistica',
+  'asistente logistica',
+  'anfitrion',
   'colaborador bienvenida',
   'colaborador de bienvenida',
   'coordinador bienvenida',
   'coordinador informacion',
 ])
 
+/** Un comité de sede: cuelga del área "Sedes", o se llama "Sede X".
+ *
+ *  Antes esto exigía que el padre fuera "Área Espiritual" y por eso la regla
+ *  NO otorgaba nada: los 14 comités de sede con puestos cuelgan de "Sedes".
+ *  Los 92 roles automáticos que hay en producción los puso una migración que
+ *  comparaba solo el título; desde entonces, asignar a alguien a uno de esos
+ *  puestos no le daba el rol. La segunda condición cubre "Sede Life Este" y
+ *  "Sede Life Oeste", que sí cuelgan de "Área Espiritual" (hoy sin puestos). */
+function esComiteDeSede(ctx: PositionContext): boolean {
+  if (ctx.areaType !== 'committee') return false
+  return norm(ctx.parentAreaName ?? '') === 'sedes' || norm(ctx.areaName).startsWith('sede ')
+}
+
 export const POSITION_ROLE_RULES: PositionRoleRule[] = [
   {
     role: 'encargado_eventos',
     description:
-      'Puestos de logística/bienvenida/información en los comités de sede (Área Espiritual): ' +
-      'Logística, Colaborador/Coordinador Bienvenida, Coordinador Información.',
-    matches: (ctx) =>
-      ctx.areaType === 'committee' &&
-      norm(ctx.parentAreaName ?? '') === 'area espiritual' &&
-      SEDE_EVENTOS_TITLES.has(norm(ctx.title)),
+      'Puestos que operan el evento en los comités de sede: Logística, Asistente Logística, ' +
+      'Anfitrión, Colaborador/Coordinador Bienvenida y Coordinador Información.',
+    matches: (ctx) => esComiteDeSede(ctx) && SEDE_EVENTOS_TITLES.has(norm(ctx.title)),
   },
   {
     role: 'lider_comite',
