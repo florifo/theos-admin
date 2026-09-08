@@ -586,7 +586,15 @@ export default function CheckinLivePage({ params }: { params: Promise<{ id: stri
               formulario para no volver a teclearlo. */}
           <button
             onClick={() => setShowNewPerson(true)}
-            className="w-full flex items-center justify-center gap-2 rounded-2xl bg-coral px-4 py-3 text-sm font-semibold text-white hover:bg-coral-deep transition-colors font-body min-h-[52px]"
+            className={cn(
+              'w-full flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold transition-colors font-body min-h-[52px]',
+              // Cuando la búsqueda YA encontró a alguien, lo que hay que hacer es
+              // tocar a esa persona: el alta baja a secundaria para no competir
+              // con el resultado. Sin resultados, es la acción principal.
+              searchResults.length > 0
+                ? 'border border-dashed border-coral/50 text-coral hover:bg-coral/5'
+                : 'bg-coral text-white hover:bg-coral-deep',
+            )}
           >
             <UserPlus size={17} />
             {query.trim().length >= 2

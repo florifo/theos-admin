@@ -15,7 +15,13 @@ const EVELYN = 'evelyn.eventos@prueba.theosplace.invalid'
 const PASSWORD = 'Prueba.Agosto.2026' // contraseña única del seed
 const CHARLA = '[prueba] Charla de bienvenida'
 const SUBEVENTO = '[prueba] Cuidado de niños'
-const ANA = 'Ana Nivel Uno' // sin familia en el seed → va directo a la tarjeta
+// La persona que llega sola: sin familia, así que al elegirla va directo a la
+// tarjeta de confirmación en vez de abrir la ventana de familia.
+//
+// La creaba el seed y en algún momento se limpió, así que la grabación se caía
+// buscándola. Ahora la asegura el setup, como a todo lo demás: un tutorial que
+// depende de datos que otro script mantiene no es repetible.
+const ANA = '[prueba] Ana Asistente'
 const FABIAN = '[prueba] Fabián Familia'
 const FELIPE = '[prueba] Felipe Familia'
 
@@ -95,6 +101,10 @@ export const flujo: TutorialFlow = {
     // Cédula de prueba: sin ella, el banner "Falta tu cédula" sale en todas
     // las tomas del tutorial.
     await admin.from('members').update({ cedula: '9-9999-9001' }).eq('email', EVELYN)
+    // Ana: la asistente que llega sola. Sin familia a propósito.
+    await ensureMiembro(admin, {
+      externalId: 'PRUEBA-9002', firstName: '[prueba] Ana', lastName: 'Asistente',
+    })
     const eventId = await ensureCharla(admin)
     await ensureFamiliaYSubevento(admin, eventId)
     await admin.from('event_checkins').delete().eq('event_id', eventId)
@@ -121,7 +131,7 @@ export const flujo: TutorialFlow = {
     await t.shot('02-charla')
 
     // 3 · Buscar a la persona por nombre (la alternativa al QR)
-    await t.fill('input[placeholder*="Buscar por nombre"]', 'Ana Nivel')
+    await t.fill('input[placeholder*="Buscar por nombre"]', 'Ana Asistente')
     await t.page.getByText(ANA).filter({ visible: true }).first().waitFor({ timeout: 15_000 })
     await t.badge(3)
     await t.pause(800)
