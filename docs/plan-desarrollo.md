@@ -3653,7 +3653,7 @@ que ya valida el alta (src/lib/members/alta-persona.ts, que ya calcula la edad).
 ```
 
 
-### [ ] DAT-2 · Fusionar dos fichas destruye datos en silencio
+### [x] DAT-2 · Fusionar dos fichas destruye datos en silencio — HECHO 2026-09-08 (migración 20260908160000)
 
 ```
 QUÉ PASA. merge_members reasigna 23 tablas y después BORRA la ficha perdedora.
