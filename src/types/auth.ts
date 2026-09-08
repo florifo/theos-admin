@@ -23,6 +23,7 @@ export type RoleId =
   | 'forms'
   | 'evaluaciones'
   | 'gestor_accesos'
+  | 'solicitudes_estudio'
 
 export type Permission = {
   module: string

@@ -139,7 +139,10 @@ function ModuleGuard({ pathname, children }: { pathname: string; children: React
   // Excepción: /estudios/solicitudes también la abre el COMITÉ de estudios
   // bíblicos (sin rol): la pantalla y la API le muestran solo lo que le
   // asignaron. Espejo de requestQueueScope.
-  if (pathname === '/estudios/solicitudes' && user.in_study_committee) return <>{children}</>
+  if (pathname === '/estudios/solicitudes'
+      && (user.in_study_committee || (user.roles ?? []).includes('solicitudes_estudio'))) {
+    return <>{children}</>
+  }
   // Excepción (DIR-5): la cola de evaluaciones se gatea por ROL, no por módulo.
   // El rol acotado 'evaluaciones' no tiene el módulo estudios y aun así entra;
   // 'direccion' sí lo tiene y NO entra. La propia página repite el chequeo.

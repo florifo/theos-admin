@@ -58,7 +58,7 @@ export function isStudyGroupsOnly(roles: readonly RoleId[] | null | undefined): 
  *  resto de los permisos siguen siendo exclusivos de 'admin'. Fuente única para
  *  UI y validación server-side — no escalable a otros roles. */
 export const COORDINADOR_ESTUDIOS_DELEGABLE: RoleId[] = [
-  'editor_perfiles', 'editor_grupos_estudio', 'folletos',
+  'editor_perfiles', 'editor_grupos_estudio', 'folletos', 'solicitudes_estudio',
 ]
 
 /**
@@ -298,6 +298,19 @@ export const ROLES: Role[] = [
     color: '#E9B949',
     permissions: [
       { module: 'miembros', actions: ['view', 'create', 'edit'], scope: 'all' },
+    ],
+  },
+  {
+    id: 'solicitudes_estudio',
+    name: 'Solicitudes de estudio',
+    description: 'Atender las solicitudes de estudio que le asignen',
+    color: '#7FB2D4',
+    // Ve la sección de estudios SOLO para llegar a su cola. Lo que puede hacer
+    // con cada solicitud lo decide requestQueueScope: alcance 'assigned', o sea
+    // únicamente las que le asignaron. Asignar y repartir sigue siendo de los
+    // coordinadores — el comité recibe trabajo, no lo distribuye.
+    permissions: [
+      { module: 'estudios', actions: ['view'], scope: 'own' },
     ],
   },
   {

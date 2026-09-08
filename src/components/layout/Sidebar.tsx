@@ -123,8 +123,16 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   // solo el obvio: el comité de estudios bíblicos también lo ve, y tiene alcance
   // 'own'. Gatear solo por alcance le apagaba el badge (encontrado al revisar
   // los tres sitios que usan openRequests, no al escribir la condición).
+  // Quién tiene COLA de solicitudes: el rol explícito o el puesto en el comité.
+  // Estaba solo como `in_study_committee` y el ítem del menú se agregaba en dos
+  // de las cuatro ramas del submenú de Estudios. Quien además tenía
+  // editor_grupos_estudio caía en la rama de "solo grupos", que no lo agrega, y
+  // se quedaba sin el enlace aunque la página le abriera (Luis Sánchez Flores,
+  // 2026-09-08). Con una sola variable el ítem se decide en un lugar.
+  const tieneColaSolicitudes = !!user?.in_study_committee
+    || (user?.roles ?? []).includes('solicitudes_estudio')
   const puedeVerEstudios = (can('estudios', 'view') && getScope('estudios') !== 'own')
-    || !!user?.in_study_committee
+    || tieneColaSolicitudes
   const puedeVerFinanzas = can('finanzas', 'view')
   useEffect(() => {
     let alive = true
@@ -169,12 +177,16 @@ export function Sidebar({ open, onClose }: SidebarProps) {
   const groupsOnly = isStudyGroupsOnly(userRoles as RoleId[])
   // El currículo: mismo ítem para todos los casos de abajo.
   const CURRICULO: SubItem = { href: '/estudios/plan', label: 'Plan de Estudios', icon: BookText }
+  // Las solicitudes asignadas: se agregan en CUALQUIER rama, no solo en dos.
+  const SOLICITUDES_ASIGNADAS: SubItem[] = tieneColaSolicitudes
+    ? [{ href: '/estudios/solicitudes', label: 'Solicitudes', icon: Inbox, badge: openRequests }]
+    : []
   const estudiosSub: SubItem[] = groupsOnly
     // El CURRÍCULO va en TODAS las ramas: es información para quien se va a
     // matricular, no gestión, y la página está abierta a cualquier sesión.
     // El rol acotado de grupos era el único que se quedaba sin el enlace
     // (2026-08-25): la página le abría, pero no había cómo llegar desde el menú.
-    ? [{ href: '/estudios/grupos', label: 'Grupos', icon: LayoutList }, CURRICULO]
+    ? [{ href: '/estudios/grupos', label: 'Grupos', icon: LayoutList }, CURRICULO, ...SOLICITUDES_ASIGNADAS]
     : studiesBeyondOwn
     ? [
       ...ESTUDIOS_SUB.map(s => s.href === '/estudios/solicitudes' ? { ...s, badge: openRequests } : s),
@@ -189,8 +201,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
         { href: '/estudios/grupos', label: 'Grupos', icon: LayoutList },
         CURRICULO,
         // Comité de estudios bíblicos: además, las solicitudes que le asignaron.
-        ...(user?.in_study_committee
-          ? [{ href: '/estudios/solicitudes', label: 'Solicitudes', icon: Inbox, badge: openRequests }] : []),
+        ...SOLICITUDES_ASIGNADAS,
       ]
       // Sin rol de estudios: igual ve el CURRÍCULO. Es qué estudios hay y qué
       // pide cada etapa — información para quien se va a matricular, no gestión
@@ -198,8 +209,7 @@ export function Sidebar({ open, onClose }: SidebarProps) {
       // dirigente y la página estaba cerrada por el ModuleGuard).
       : [
         CURRICULO,
-        ...(user?.in_study_committee
-          ? [{ href: '/estudios/solicitudes', label: 'Solicitudes', icon: Inbox, badge: openRequests }] : []),
+        ...SOLICITUDES_ASIGNADAS,
       ]
   // DIR-5: la cola de evaluaciones vive dentro de Estudios, pero se gatea por
   // ROL y no por el módulo — el criterio es el mismo de la página y del API

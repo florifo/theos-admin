@@ -111,3 +111,25 @@ describe('isStudyCommitteeArea: el nombre real de producción', () => {
     expect(isStudyCommitteeArea('   ')).toBe(false)
   })
 })
+
+// El rol explícito (2026-09-08) hace lo mismo que el puesto en el comité. Existe
+// porque el flag derivado no se veía en Accesos ni se podía dar a mano.
+describe('rol solicitudes_estudio', () => {
+  it('da la misma cola que estar en el comité', () => {
+    expect(requestQueueScope({ roles: ['solicitudes_estudio'] })).toBe('assigned')
+    expect(requestQueueScope({ roles: [], inStudyCommittee: true })).toBe('assigned')
+  })
+
+  it('no asciende a coordinador: sigue viendo solo lo asignado', () => {
+    expect(requestQueueScope({ roles: ['solicitudes_estudio'] })).not.toBe('all')
+    expect(canAssignRequests(['solicitudes_estudio'])).toBe(false)
+  })
+
+  it('acompañado de un rol de coordinador, gana el coordinador', () => {
+    expect(requestQueueScope({ roles: ['solicitudes_estudio', 'coordinador_estudios'] })).toBe('all')
+  })
+
+  it('sin el rol ni el puesto, no entra', () => {
+    expect(requestQueueScope({ roles: ['editor_grupos_estudio'] })).toBe('none')
+  })
+})

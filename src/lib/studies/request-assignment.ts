@@ -65,6 +65,11 @@ export function requestQueueScope(input: {
 }): RequestQueueScope {
   const roles = input.roles ?? []
   if (roles.some(r => (REQUEST_COORDINATOR_ROLES as string[]).includes(r))) return 'all'
+  // El rol explícito y el puesto en el comité dan lo mismo. El rol se otorga
+  // solo con el puesto, así que en la práctica van juntos; se aceptan los dos
+  // para poder darlo a mano a alguien que ayuda sin estar en el comité, y para
+  // que quitar el rol tenga efecto aunque el puesto siga.
+  if (roles.includes('solicitudes_estudio')) return 'assigned'
   if (input.inStudyCommittee) return 'assigned'
   return 'none'
 }

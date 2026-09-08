@@ -86,3 +86,34 @@ describe('lider_comite', () => {
     }
   })
 })
+
+// El comité de estudios bíblicos atiende las solicitudes que le asignan, así
+// que cualquier puesto activo ahí trae el rol. Antes el acceso venía de un flag
+// derivado (in_study_committee) que no se veía en la pantalla de Accesos ni se
+// podía dar a mano: quien no calzaba en la regla quedaba sin forma de entrar.
+describe('solicitudes_estudio por puesto del comité', () => {
+  const enComite = (title: string, areaName = 'Comité Estudios Bíblicos') =>
+    rolesGrantedByPosition({ title, areaName, areaType: 'committee', parentAreaName: 'Area Espiritual' })
+
+  it('lo dan todos los puestos del comité, sea cual sea el título', () => {
+    for (const t of ['Colaborador EB', 'Colaborador ProofReading', 'Encargado',
+                     'Colaborador Diagramación', 'Asistente Encargado']) {
+      expect(enComite(t)).toContain('solicitudes_estudio')
+    }
+  })
+
+  it('el nombre del comité se reconoce con y sin "de"', () => {
+    expect(enComite('Colaborador EB', 'Comité de Estudios Bíblicos')).toContain('solicitudes_estudio')
+    expect(enComite('Colaborador EB', 'COMITE ESTUDIOS BIBLICOS')).toContain('solicitudes_estudio')
+  })
+
+  it('no lo da un comité distinto', () => {
+    expect(enComite('Colaborador EB', 'Comité de Mujeres')).not.toContain('solicitudes_estudio')
+    expect(enComite('Logística', 'Sede Liberia')).not.toContain('solicitudes_estudio')
+  })
+
+  it('el encargado del comité lo suma a lider_comite, no lo reemplaza', () => {
+    expect(enComite('Encargado')).toEqual(
+      expect.arrayContaining(['solicitudes_estudio', 'lider_comite']))
+  })
+})

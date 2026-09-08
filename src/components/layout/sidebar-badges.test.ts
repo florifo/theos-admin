@@ -28,15 +28,39 @@ describe('los badges se piden solo si pueden verse', () => {
       SIDEBAR.indexOf('const puedeVerEstudios'),
       SIDEBAR.indexOf('const puedeVerFinanzas'),
     )
-    expect(cond).toContain('in_study_committee')
+    // 2026-09-08: las dos formas de tener cola —el puesto en el comité y el rol
+    // solicitudes_estudio— se unificaron en `tieneColaSolicitudes`, que se
+    // define justo arriba. La condición tiene que apoyarse en esa variable.
+    expect(cond).toContain('tieneColaSolicitudes')
+    const decl = SIDEBAR.slice(
+      SIDEBAR.indexOf('const tieneColaSolicitudes'),
+      SIDEBAR.indexOf('const puedeVerEstudios'),
+    )
+    expect(decl).toContain('in_study_committee')
+    expect(decl).toContain('solicitudes_estudio')
   })
 
-  it('cada sitio que dibuja el badge está cubierto por la condición', () => {
-    // Los tres usos de openRequests: submenú completo (alcance > own),
-    // dirigente + comité, y sin rol de estudios + comité. Los dos últimos
-    // dependen de in_study_committee, ya verificado arriba. Este test cuenta los
-    // usos: si aparece un cuarto, hay que revisar si la condición lo cubre.
+  it('el ítem de solicitudes se arma UNA vez y detrás de esa condición', () => {
+    // Antes había tres copias del ítem repartidas por las ramas del submenú, y
+    // este test contaba que fueran tres. Al agregar el rol se descubrió el
+    // problema de fondo: la rama de "solo grupos" no tenía copia, así que quien
+    // estaba en el comité Y tenía editor_grupos_estudio se quedaba sin el
+    // enlace. Ahora el ítem es uno solo y se reparte a todas las ramas.
+    // Dos usos, y son distintos a propósito: el ítem del COMITÉ (una sola
+    // definición, SOLICITUDES_ASIGNADAS) y el badge que se le pega al ítem que
+    // ESTUDIOS_SUB ya trae para quien tiene el módulo completo. Si aparece un
+    // tercero, alguien volvió a copiar el ítem.
     const usos = [...SIDEBAR.matchAll(/badge: openRequests/g)].length
-    expect(usos, 'apareció un uso nuevo de openRequests: revisá puedeVerEstudios').toBe(3)
+    expect(usos, 'el ítem volvió a duplicarse: revisá SOLICITUDES_ASIGNADAS').toBe(2)
+    const decl = SIDEBAR.slice(
+      SIDEBAR.indexOf('const SOLICITUDES_ASIGNADAS'),
+      SIDEBAR.indexOf('const SOLICITUDES_ASIGNADAS') + 300,
+    )
+    expect(decl).toContain('tieneColaSolicitudes')
+    // Y se reparte a las tres ramas que NO son la del módulo completo (esa ya
+    // trae el ítem desde ESTUDIOS_SUB): solo-grupos, dirigente y sin rol.
+    // La de solo-grupos es la que faltaba y dejaba a Luis sin el enlace.
+    const ramas = [...SIDEBAR.matchAll(/\.\.\.SOLICITUDES_ASIGNADAS/g)].length
+    expect(ramas, 'alguna rama del submenú se quedó sin el ítem').toBe(3)
   })
 })

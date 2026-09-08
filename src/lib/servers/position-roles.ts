@@ -3,6 +3,7 @@
 // Extensible: agregar una regla nueva a POSITION_ROLE_RULES sin tocar el resto
 // del sistema (asignar/remover, migración de datos y sync ya son genéricos).
 import type { RoleId } from '@/types/auth'
+import { isStudyCommitteeArea } from '@/lib/studies/request-assignment'
 
 export type PositionContext = {
   title: string
@@ -67,6 +68,17 @@ export const POSITION_ROLE_RULES: PositionRoleRule[] = [
       'Puestos que operan el evento en los comités de sede: Logística, Asistente Logística, ' +
       'Anfitrión, Colaborador/Coordinador Bienvenida y Coordinador Información.',
     matches: (ctx) => esComiteDeSede(ctx) && SEDE_EVENTOS_TITLES.has(norm(ctx.title)),
+  },
+  {
+    role: 'solicitudes_estudio',
+    description:
+      'Cualquier puesto activo en el Comité de Estudios Bíblicos: es el equipo que '
+      + 'atiende las solicitudes que le asignan los coordinadores.',
+    // Se reconoce el comité por sus PALABRAS, no por el nombre exacto: en la
+    // base convive "Comité Estudios Bíblicos" con variantes que llevan "de".
+    // Misma función que usa la asignación de solicitudes, así que las dos
+    // pantallas no se pueden desalinear.
+    matches: (ctx) => ctx.areaType === 'committee' && isStudyCommitteeArea(ctx.areaName),
   },
   {
     role: 'lider_comite',
