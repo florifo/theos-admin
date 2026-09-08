@@ -3653,6 +3653,50 @@ que ya valida el alta (src/lib/members/alta-persona.ts, que ya calcula la edad).
 ```
 
 
+### [ ] DAT-2 · Fusionar dos fichas destruye datos en silencio
+
+```
+QUÉ PASA. merge_members reasigna 23 tablas y después BORRA la ficha perdedora.
+De las 84 columnas que apuntan a members, la función menciona 33: las otras 51
+quedan afuera, y como casi todas las importantes son ON DELETE CASCADE, esas
+filas se destruyen sin aviso. No hay error, no hay log, no hay forma de saber
+qué se perdió.
+
+Lo que se pierde y por qué duele (todas CASCADE, verificado 2026-09-08):
+  · member_spiritual_data (361 filas)  — bautismo, testimonio, la historia
+    espiritual de la persona.
+  · member_admin_data (176)            — incluye authorized_virtual_studies, o
+    sea el permiso para estudios virtuales.
+  · member_role_position_grants (189)  — el respaldo de los roles automáticos.
+  · internal_notifications (3.507), study_invitations (45),
+    member_recommendations (31), form_access_grants (22),
+    member_notification_prefs (4), notice_dismissals (19),
+    birthday_greetings (40).
+
+CASO REAL que lo destapó. Silvia Chavarría Flores tenía dos fichas y se
+fusionaron el 2026-09-08. Su rol encargado_eventos sobrevivió (member_roles SÍ
+se reasigna) pero su respaldo en member_role_position_grants no: quedó un rol
+automático sin ningún puesto detrás, o sea un permiso que ya nadie va a
+retirar cuando ella deje el puesto. Se reparó a mano con
+scripts/roles-sede-2026-09/otorgar-eventos-a-sedes.ts, que es idempotente.
+
+LO QUE NO ES TRIVIAL, y por eso esto no es "agregar 51 UPDATE". Varias de esas
+tablas tienen UNIQUE por member_id: si LAS DOS fichas tienen fila
+—member_spiritual_data, member_admin_data, member_notification_prefs— el
+UPDATE choca. Hay que decidir por tabla: se queda la de destino, o se rellenan
+sus campos vacíos con los del origen. Y hay que separar las columnas de SUJETO
+(member_id: se reasignan) de las de ACTOR (changed_by, granted_by, reviewed_by:
+también, pero son otra semántica y hoy quedan en NULL).
+
+CÓMO VERIFICARLO. La consulta que encontró esto compara las FK a members contra
+el texto de la función; sirve de test de regresión y debería quedar como tal,
+para que una tabla nueva con member_id no se olvide otra vez.
+
+MIENTRAS TANTO: después de cada fusión, correr la consulta de huérfanos
+(rol automático activo sin fila en member_role_position_grants).
+```
+
+
 ## Notas para la ejecución en Claude Code
 
 - Un punto por sesión/PR. Pegar el prompt tal cual y pedir además: correr `tsc --noEmit`,
