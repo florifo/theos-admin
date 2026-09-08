@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
-import { filtrarServidores, type FiltroEstado } from '@/lib/servers/committee-filter'
+import { filtrarServidores, puestosDisponibles, TODOS_LOS_PUESTOS, type FiltroEstado } from '@/lib/servers/committee-filter'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { CommitteeServer, CommitteeGoal, CommitteeData } from '@/types/server'
@@ -47,6 +47,7 @@ export default function CommitteeDetailPage() {
   const [tab, setTab] = useState<Tab>('miembros')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('active')
+  const [positionFilter, setPositionFilter] = useState<string>(TODOS_LOS_PUESTOS)
   const [visibleColumns, setVisibleColumns] = useState<ColumnDef<FlatServer>[]>(
     SERVER_COLUMNS.filter(c => c.defaultVisible),
   )
@@ -114,8 +115,15 @@ export default function CommitteeDetailPage() {
   // La MISMA lista alimenta la tabla y el export (ver committee-filter.ts: eran
   // dos expresiones distintas y se desalinearon).
   const displayedMembers = useMemo(
-    () => filtrarServidores(allCommitteeMembers, { search, status: statusFilter }),
-    [allCommitteeMembers, search, statusFilter]
+    () => filtrarServidores(allCommitteeMembers, { search, status: statusFilter, position: positionFilter }),
+    [allCommitteeMembers, search, statusFilter, positionFilter]
+  )
+  // Los puestos que existen en ESTE comité, sacados de su gente. Se calculan
+  // sobre la lista completa, no la filtrada: si dependieran del filtro, elegir
+  // un puesto lo sacaría del desplegable y no habría cómo volver.
+  const positionOptions = useMemo(
+    () => puestosDisponibles(allCommitteeMembers),
+    [allCommitteeMembers]
   )
 
   // Servidores del comité aplanados para exportar (mismas columnas que el
@@ -359,6 +367,9 @@ export default function CommitteeDetailPage() {
             onSearchChange={setSearch}
             statusFilter={statusFilter}
             onStatusFilterChange={setStatusFilter}
+            positionFilter={positionFilter}
+            positionOptions={positionOptions}
+            onPositionFilterChange={setPositionFilter}
             onChangePosition={handleChangePositionOpen}
             onDisconnect={setDisconnectTarget}
             onAddServerClick={() => setAddServerOpen(true)}

@@ -32,6 +32,10 @@ type Props = {
   search: string
   onSearchChange: (value: string) => void
   statusFilter: StatusFilter
+  /** Puesto elegido ('all' = todos) y los que hay para elegir. */
+  positionFilter: string
+  positionOptions: string[]
+  onPositionFilterChange: (v: string) => void
   onStatusFilterChange: (value: StatusFilter) => void
   onChangePosition: (member: CommitteeServer) => void
   onDisconnect: (member: CommitteeServer) => void
@@ -47,6 +51,9 @@ export function MembersTab({
   search,
   onSearchChange,
   statusFilter,
+  positionFilter,
+  positionOptions,
+  onPositionFilterChange,
   onStatusFilterChange,
   onChangePosition,
   onDisconnect,
@@ -81,6 +88,21 @@ export function MembersTab({
             </button>
           ))}
         </div>
+        {/* Filtro por PUESTO. Los comités grandes tienen decenas de personas
+            repartidas en una docena de puestos —Sede Meridiano Martes: 67 en
+            unos 15— y no había cómo mirar uno solo. Se esconde cuando el comité
+            tiene un solo puesto: ahí no filtra nada. */}
+        {positionOptions.length > 1 && (
+          <select
+            value={positionFilter}
+            onChange={e => onPositionFilterChange(e.target.value)}
+            aria-label="Filtrar por puesto"
+            className="rounded-full bg-surface-low px-3 py-2 text-[13px] text-navy outline-none focus:ring-1 focus:ring-coral/30 font-body max-w-[14rem]"
+          >
+            <option value="all">Todos los puestos</option>
+            {positionOptions.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        )}
         {toolbarExtra}
         <button
           className="inline-flex items-center gap-1.5 rounded-full bg-coral px-4 py-2 text-[13px] text-white hover:bg-coral-deep transition-colors font-body"

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { filtrarServidores } from './committee-filter'
+import { filtrarServidores, puestosDisponibles } from './committee-filter'
 
 const gente = [
   { name: 'Ana Mora', status: 'active' },
@@ -47,5 +47,63 @@ describe('el export baja lo mismo que muestra la tabla', () => {
     ]
     expect(filtrarServidores(muchos, {})).toHaveLength(67)
     expect(filtrarServidores(muchos, { status: 'all' })).toHaveLength(84)
+  })
+})
+
+// El filtro por puesto (2026-09-08): un comité grande tiene decenas de personas
+// repartidas en una docena de puestos y no había cómo mirar uno solo.
+describe('filtro por puesto', () => {
+  const comite = [
+    { name: 'Ana Mora', status: 'active', position: 'Colaborador Bienvenida' },
+    { name: 'Beto Solís', status: 'active', position: 'Colaborador Comida' },
+    { name: 'Carla Mora', status: 'active', position: 'Colaborador Bienvenida' },
+    { name: 'Dina Rojas', status: 'inactive', position: 'Anfitrión' },
+    { name: 'Elena Paz', status: 'active', position: null },
+  ]
+
+  it('deja solo el puesto elegido', () => {
+    expect(filtrarServidores(comite, { position: 'Colaborador Bienvenida' }).map(x => x.name))
+      .toEqual(['Ana Mora', 'Carla Mora'])
+  })
+
+  it('«todos» no filtra nada', () => {
+    expect(filtrarServidores(comite, { position: 'all', status: 'all' })).toHaveLength(5)
+  })
+
+  it('se combina con el estado y la búsqueda, no los reemplaza', () => {
+    expect(filtrarServidores(comite, { position: 'Anfitrión', status: 'active' })).toHaveLength(0)
+    expect(filtrarServidores(comite, { position: 'Anfitrión', status: 'all' }).map(x => x.name))
+      .toEqual(['Dina Rojas'])
+    expect(filtrarServidores(comite, { position: 'Colaborador Bienvenida', search: 'carla' }).map(x => x.name))
+      .toEqual(['Carla Mora'])
+  })
+
+  it('quien no tiene puesto no aparece al filtrar por uno', () => {
+    expect(filtrarServidores(comite, { position: 'Colaborador Comida' }).map(x => x.name))
+      .toEqual(['Beto Solís'])
+  })
+})
+
+describe('puestosDisponibles', () => {
+  const comite = [
+    { name: 'A', status: 'active', position: 'Colaborador Comida' },
+    { name: 'B', status: 'inactive', position: 'Anfitrión' },
+    { name: 'C', status: 'active', position: 'Colaborador Comida' },
+    { name: 'D', status: 'active', position: null },
+    { name: 'E', status: 'active', position: '  ' },
+  ]
+
+  it('sin repetidos y en orden alfabético', () => {
+    expect(puestosDisponibles(comite)).toEqual(['Anfitrión', 'Colaborador Comida'])
+  })
+
+  // Si dependiera del filtro de estado, elegir un puesto que solo tienen los
+  // inactivos lo haría desaparecer del desplegable y no habría cómo volver.
+  it('incluye los puestos de los inactivos', () => {
+    expect(puestosDisponibles(comite)).toContain('Anfitrión')
+  })
+
+  it('ignora los vacíos', () => {
+    expect(puestosDisponibles(comite)).not.toContain('')
   })
 })
