@@ -117,3 +117,37 @@ describe('solicitudes_estudio por puesto del comité', () => {
       expect.arrayContaining(['solicitudes_estudio', 'lider_comite']))
   })
 })
+
+// Los colaboradores de Youth hacen el check-in del subevento de Youth en las
+// charlas, así que su puesto trae el acceso a eventos (2026-09-08).
+describe('encargado_eventos por el Comité Youth', () => {
+  const enYouth = (title: string, areaName = 'Comité Youth') =>
+    rolesGrantedByPosition({ title, areaName, areaType: 'committee', parentAreaName: 'Area de Enseñanza' })
+
+  it('el Colaborador de Youth lo trae', () => {
+    expect(enYouth('Colaborador')).toContain('encargado_eventos')
+  })
+
+  it('el nombre del comité se reconoce con y sin tilde', () => {
+    expect(enYouth('Colaborador', 'Comite Youth')).toContain('encargado_eventos')
+    expect(enYouth('Colaborador', 'COMITÉ DE YOUTH')).toContain('encargado_eventos')
+  })
+
+  // Se acota al título exacto: esto da permiso para hacer check-in y la lista
+  // se amplía cuando alguien lo decida, no por parecido de nombre.
+  it('los otros puestos del comité NO lo traen', () => {
+    for (const t of ['Teacher', 'Asistente Teacher', 'Colaborador Youth',
+                     'Colaborador de Onboarding', 'Asistente Youth']) {
+      expect(enYouth(t), t).not.toContain('encargado_eventos')
+    }
+  })
+
+  it('un "Colaborador" de otro comité tampoco', () => {
+    expect(enYouth('Colaborador', 'Comité de Worship')).not.toContain('encargado_eventos')
+    expect(enYouth('Colaborador', 'Comité de Mujeres')).not.toContain('encargado_eventos')
+  })
+
+  it('el Encargado de Youth sigue trayendo lider_comite, y solo eso', () => {
+    expect(enYouth('Encargado')).toEqual(['lider_comite'])
+  })
+})

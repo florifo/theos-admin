@@ -56,6 +56,12 @@ const SEDE_EVENTOS_TITLES = new Set([
  *  comparaba solo el título; desde entonces, asignar a alguien a uno de esos
  *  puestos no le daba el rol. La segunda condición cubre "Sede Life Este" y
  *  "Sede Life Oeste", que sí cuelgan de "Área Espiritual" (hoy sin puestos). */
+/** El comité de Youth, por sus palabras y no por el nombre exacto. */
+function esComiteYouth(areaName: string): boolean {
+  const palabras = new Set(norm(areaName).split(/[^a-z0-9]+/).filter(Boolean))
+  return palabras.has('comite') && palabras.has('youth')
+}
+
 function esComiteDeSede(ctx: PositionContext): boolean {
   if (ctx.areaType !== 'committee') return false
   return norm(ctx.parentAreaName ?? '') === 'sedes' || norm(ctx.areaName).startsWith('sede ')
@@ -68,6 +74,22 @@ export const POSITION_ROLE_RULES: PositionRoleRule[] = [
       'Puestos que operan el evento en los comités de sede: Logística, Asistente Logística, ' +
       'Anfitrión, Colaborador/Coordinador Bienvenida y Coordinador Información.',
     matches: (ctx) => esComiteDeSede(ctx) && SEDE_EVENTOS_TITLES.has(norm(ctx.title)),
+  },
+  {
+    role: 'encargado_eventos',
+    description:
+      'Colaborador del Comité Youth: hacen el check-in del subevento de Youth en las charlas.',
+    // El comité se reconoce por PALABRAS, igual que el de estudios: en la base
+    // es "Comité Youth", pero cualquier variante con "de" o sin tilde cuenta.
+    //
+    // Solo el título exacto "Colaborador". El comité tiene además "Colaborador
+    // Youth" y "Colaborador de Onboarding", los dos sin gente hoy; se dejan
+    // fuera a propósito — esto da acceso a hacer check-in y la lista se amplía
+    // cuando alguien lo decida, no por parecido de nombre.
+    matches: (ctx) =>
+      ctx.areaType === 'committee'
+      && esComiteYouth(ctx.areaName)
+      && norm(ctx.title) === 'colaborador',
   },
   {
     role: 'solicitudes_estudio',
