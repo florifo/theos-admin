@@ -21,6 +21,16 @@ describe('encargado_eventos por puesto de sede', () => {
     }
   })
 
+  // Antes solo el COORDINADOR de información lo recibía; las 36 personas de la
+  // mesa quedaban afuera y su jefe adentro.
+  it('la mesa de información entra completa, incluidas las variantes', () => {
+    for (const t of ['Colaborador Información', 'Colaborador de Informacion',
+                     'Colaborador Información/Anuncios', 'Colaborador de Información/Anuncios',
+                     'Coordinador Información']) {
+      expect(rolesGrantedByPosition(enSede(t))).toContain('encargado_eventos')
+    }
+  })
+
   // La regla exigía que el comité colgara de "Área Espiritual". Ninguno de los
   // 14 comités de sede con puestos cuelga de ahí —cuelgan de "Sedes"—, así que
   // la regla no otorgaba nada al asignar a alguien. Este test fija el arreglo.
@@ -39,7 +49,7 @@ describe('encargado_eventos por puesto de sede', () => {
 
   it('no lo dan los otros puestos de la misma sede', () => {
     for (const t of ['Colaborador Comida', 'Colaborador Finanzas', 'Colaborador Montaje',
-                     'Colaborador Información', 'Coordinador Comida']) {
+                     'Colaborador Anuncios', 'Coordinador Comida']) {
       expect(rolesGrantedByPosition(enSede(t))).not.toContain('encargado_eventos')
     }
   })

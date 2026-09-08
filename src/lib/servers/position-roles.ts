@@ -27,7 +27,12 @@ function norm(s: string): string {
 
 /** Puestos de una sede que operan el evento: logística, anfitriones, bienvenida
  *  e información. Los títulos salen del catálogo real (verificado 2026-09-07);
- *  las variantes con y sin "de" conviven en la base y por eso están las dos. */
+ *  las variantes con y sin "de" conviven en la base y por eso están las dos.
+ *
+ *  Información entra COMPLETA —colaborador y coordinador—: antes solo estaba el
+ *  coordinador, así que las 36 personas de la mesa de información no recibían el
+ *  rol y su jefe sí. Se incluyen también los títulos "Información/Anuncios", que
+ *  son la misma mesa en las sedes que juntaron las dos funciones. */
 const SEDE_EVENTOS_TITLES = new Set([
   'logistica',
   'asistente logistica',
@@ -35,6 +40,10 @@ const SEDE_EVENTOS_TITLES = new Set([
   'colaborador bienvenida',
   'colaborador de bienvenida',
   'coordinador bienvenida',
+  'colaborador informacion',
+  'colaborador de informacion',
+  'colaborador informacion/anuncios',
+  'colaborador de informacion/anuncios',
   'coordinador informacion',
 ])
 
