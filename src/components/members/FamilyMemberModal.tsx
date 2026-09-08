@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Search, UserCheck, UserPlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { validarAltaDePersona } from '@/lib/members/alta-persona'
 import { calcAge } from '@/lib/format'
 import { Modal } from '@/components/shared/Modal'
 
@@ -70,8 +71,15 @@ export function FamilyMemberModal({ defaultLastName = '', existingIds = [], onAd
   }
 
   function addNew() {
-    if (!firstName.trim() || !lastName.trim() || !relation) {
-      setError('Nombre, apellidos y relación son obligatorios.')
+    if (!relation) { setError('Seleccioná la relación.'); return }
+    // Misma regla que en el alta desde el check-in: la cédula es obligatoria
+    // salvo que la fecha de nacimiento diga que es menor de edad.
+    const chequeo = validarAltaDePersona({
+      first_name: firstName, last_name: lastName || defaultLastName,
+      cedula, birth_date: birthDate,
+    })
+    if (!chequeo.ok) {
+      setError(chequeo.errores.cedula ?? chequeo.errores.first_name ?? chequeo.errores.last_name ?? null)
       return
     }
     onAdd({
@@ -167,7 +175,13 @@ export function FamilyMemberModal({ defaultLastName = '', existingIds = [], onAd
               <input value={lastName} onChange={e => setLastName(e.target.value)} placeholder={defaultLastName || 'Apellidos'} className={cn(inputCls, 'font-body')} />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <input value={cedula} onChange={e => setCedula(e.target.value)} placeholder="Cédula (opcional)" className={cn(inputCls, 'font-mono')} />
+              <input
+                value={cedula}
+                onChange={e => { setCedula(e.target.value); setError(null) }}
+                placeholder={isMinor ? 'Cédula (opcional)' : 'Cédula *'}
+                aria-label={isMinor ? 'Cédula, opcional para menores' : 'Cédula, obligatoria'}
+                className={cn(inputCls, 'font-mono')}
+              />
               <div className="relative">
                 <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} className={cn(inputCls, 'font-body')} />
                 {isMinor && (

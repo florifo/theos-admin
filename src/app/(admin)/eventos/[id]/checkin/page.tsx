@@ -14,6 +14,8 @@ import { FamilyMemberModal, type FamilyDraft } from '@/components/members/Family
 import { DocumentCapture } from '@/components/members/DocumentCapture'
 import { Modal } from '@/components/shared/Modal'
 import { getInitials, toYmdLocal, formatMoney } from '@/lib/format'
+import { validarAltaDePersona } from '@/lib/members/alta-persona'
+import { normalizeCedula } from '@/lib/cedula'
 import { PageContainer } from '@/components/layout/PageContainer'
 
 // El escáner QR (zxing, ~100KB+) se carga solo cuando el usuario abre la cámara:
@@ -566,27 +568,31 @@ export default function CheckinLivePage({ params }: { params: Promise<{ id: stri
                   </div>
                 </button>
               ))}
-              <button
-                onClick={() => setShowNewPerson(true)}
-                className="w-full flex items-center gap-3 rounded-2xl px-4 py-3 text-left text-coral hover:bg-coral/5 transition-colors border border-dashed border-coral/40"
-              >
-                <UserPlus size={18} />
-                <span className="text-sm font-medium font-body">Agregar a «{query.trim()}» como persona nueva</span>
-              </button>
+            </div>
+          ) : query.trim().length >= 2 && searching ? (
+            <div className="rounded-2xl bg-surface-card p-6 text-center shadow-[var(--shadow-sm)]">
+              <p className="text-navy-light/80 text-sm font-body">Buscando…</p>
             </div>
           ) : query.trim().length >= 2 ? (
-            <div className="rounded-2xl bg-surface-card p-6 text-center shadow-[var(--shadow-sm)] space-y-3">
-              <p className="text-navy-light/80 text-sm font-body">{searching ? 'Buscando…' : 'No se encontró nadie con ese nombre.'}</p>
-              {!searching && (
-                <button
-                  onClick={() => setShowNewPerson(true)}
-                  className="inline-flex items-center gap-2 rounded-full bg-coral px-4 py-2.5 text-sm font-medium text-white hover:bg-coral-deep transition-colors font-body"
-                >
-                  <UserPlus size={15} /> Agregar persona nueva
-                </button>
-              )}
+            <div className="rounded-2xl bg-surface-card p-6 text-center shadow-[var(--shadow-sm)]">
+              <p className="text-navy-light/80 text-sm font-body">No se encontró nadie con ese nombre.</p>
             </div>
           ) : null}
+
+          {/* Persona nueva: botón FIJO. Antes solo aparecía después de escribir
+              un nombre y esperar a que la búsqueda no encontrara nada — tres
+              pasos para lo que en la fila es lo primero que se sabe: que la
+              persona no está. Cuando ya hay algo escrito, arrastra el nombre al
+              formulario para no volver a teclearlo. */}
+          <button
+            onClick={() => setShowNewPerson(true)}
+            className="w-full flex items-center justify-center gap-2 rounded-2xl bg-coral px-4 py-3 text-sm font-semibold text-white hover:bg-coral-deep transition-colors font-body min-h-[52px]"
+          >
+            <UserPlus size={17} />
+            {query.trim().length >= 2
+              ? `Agregar a «${query.trim()}» como persona nueva`
+              : 'Agregar persona nueva'}
+          </button>
             </div>
 
             {/* Columna derecha: registrados */}
@@ -878,8 +884,32 @@ function NewPersonModal({ initialName, onClose, onCreated, onCheckedIn, persistC
   const [error, setError] = useState<string | null>(null)
   const [familyDrafts, setFamilyDrafts] = useState<FamilyDraft[]>([])
   const [showFamily, setShowFamily] = useState(false)
+  const [tocado, setTocado] = useState(false)
+  // Persona que YA tiene esa cédula. En vez de solo bloquear, se ofrece hacerle
+  // el check-in a ella: es lo que resuelve la fila y lo que evita el duplicado.
+  const [yaExiste, setYaExiste] = useState<{ id: string; name: string } | null>(null)
 
-  const valid = firstName.trim().length > 0 && lastName.trim().length > 0
+  const chequeo = validarAltaDePersona({
+    first_name: firstName, last_name: lastName, cedula, birth_date: birthDate,
+  })
+  const valid = chequeo.ok
+
+  /** Al salir del campo: ¿esta cédula ya es de alguien? El lookup busca por
+   *  cédula además de por nombre, así que sirve tal cual. */
+  async function buscarDuplicado() {
+    const n = normalizeCedula(cedula)
+    if (!n) { setYaExiste(null); return }
+    try {
+      const res = await fetch(`/api/members/lookup?search=${encodeURIComponent(n)}&pageSize=5`)
+      if (!res.ok) return
+      const d = await res.json() as { members?: Array<{ id: string; first_name: string; last_name: string; cedula?: string | null }> }
+      const hit = (d.members ?? []).find(m => normalizeCedula(String(m.cedula ?? '')) === n)
+      setYaExiste(hit ? { id: hit.id, name: `${hit.first_name} ${hit.last_name}`.trim() } : null)
+    } catch {
+      // Si la consulta falla no se frena el alta: el POST /api/members igual
+      // devuelve 409 por duplicado y ahí se avisa.
+    }
+  }
 
   async function createMember(payload: Record<string, unknown>): Promise<{ id: string; name: string }> {
     const res = await fetch('/api/members', {
@@ -897,7 +927,8 @@ function NewPersonModal({ initialName, onClose, onCreated, onCheckedIn, persistC
   }
 
   async function submit() {
-    if (!valid || saving) return
+    if (saving) return
+    if (!valid) { setTocado(true); return }
     setSaving(true)
     setError(null)
     try {
@@ -995,14 +1026,48 @@ function NewPersonModal({ initialName, onClose, onCreated, onCheckedIn, persistC
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <label htmlFor="np-cedula" className={labelCls} style={labelStyle}>Cédula</label>
-            <input id="np-cedula" className={fieldCls} style={fieldStyle} value={cedula} onChange={e => setCedula(e.target.value)} placeholder="1-2345-6789" />
+            <label htmlFor="np-cedula" className={labelCls} style={labelStyle}>
+              Cédula {chequeo.exigeCedula ? '*' : '(opcional para menores)'}
+            </label>
+            <input
+              id="np-cedula" className={fieldCls} style={fieldStyle}
+              value={cedula}
+              onChange={e => { setCedula(e.target.value); setYaExiste(null) }}
+              onBlur={buscarDuplicado}
+              placeholder="1-2345-6789"
+              aria-invalid={tocado && !!chequeo.errores.cedula}
+              aria-describedby={chequeo.errores.cedula ? 'np-cedula-err' : undefined}
+            />
           </div>
           <div className="space-y-1">
             <label htmlFor="np-birth" className={labelCls} style={labelStyle}>Fecha de nacimiento</label>
             <input id="np-birth" type="date" className={fieldCls} style={fieldStyle} value={birthDate} onChange={e => setBirthDate(e.target.value)} />
           </div>
         </div>
+
+        {tocado && chequeo.errores.cedula && (
+          <p id="np-cedula-err" className="text-[13px] text-coral-soft font-body" role="alert">
+            {chequeo.errores.cedula}
+          </p>
+        )}
+
+        {/* La cédula ya es de alguien: se ofrece registrar a esa persona en vez
+            de crear un duplicado. */}
+        {yaExiste && (
+          <div className="rounded-xl bg-white/10 px-3 py-3 space-y-2" role="alert">
+            <p className="text-[13px] text-white font-body">
+              Esa cédula ya es de <span className="font-semibold">{yaExiste.name}</span>. No hay que
+              crearle otra ficha.
+            </p>
+            <button
+              type="button"
+              onClick={() => { onCreated(yaExiste); }}
+              className="w-full rounded-xl bg-white/15 py-2 text-[13px] font-medium text-white hover:bg-white/25 transition-colors font-body"
+            >
+              Hacerle el check-in a {yaExiste.name.split(' ')[0]}
+            </button>
+          </div>
+        )}
 
         {/* Familia */}
         <div className="space-y-2">
@@ -1024,7 +1089,13 @@ function NewPersonModal({ initialName, onClose, onCreated, onCheckedIn, persistC
           </button>
         </div>
 
-        {error && <p className="text-[13px] text-coral font-body">{error}</p>}
+        {error && <p className="text-[13px] text-coral-soft font-body" role="alert">{error}</p>}
+
+        {tocado && (chequeo.errores.first_name || chequeo.errores.last_name) && (
+          <p className="text-[13px] text-coral-soft font-body" role="alert">
+            {chequeo.errores.first_name ?? chequeo.errores.last_name}
+          </p>
+        )}
 
         <p className="text-[13px] text-white/80 font-body">
           Si tiene correo, se le enviará una invitación para completar su perfil y crear su contraseña.
@@ -1032,7 +1103,7 @@ function NewPersonModal({ initialName, onClose, onCreated, onCheckedIn, persistC
 
         <button
           onClick={submit}
-          disabled={!valid || saving}
+          disabled={saving || !!yaExiste}
           className="w-full rounded-2xl bg-coral py-3 text-sm font-semibold text-white hover:bg-coral-deep transition-colors disabled:opacity-40 font-body"
         >
           {saving ? 'Creando…' : familyDrafts.length > 0 ? `Crear familia y check-in (${familyDrafts.length + 1})` : 'Crear y hacer check-in'}
