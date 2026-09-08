@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { requireRoles, resolveTargetMemberId } from '@/lib/auth/guard'
-import { STUDY_ADMIN_ROLES } from '@/lib/auth/roles'
+import { requireRoles, resolveTargetMemberId, pidioPorOtroSinPermiso } from '@/lib/auth/guard'
+import { GROUP_ADMIN_ROLES } from '@/lib/auth/roles'
 import { enrollMember, withdrawMember, setEnrollmentGrade } from '@/lib/supabase/queries/studies'
 import { notifyEnrollment } from '@/lib/email/enrollment-notify'
 import { scholarshipErrorResponse } from '@/lib/supabase/queries/scholarships'
@@ -13,7 +13,7 @@ import { resolveOnBehalf } from '@/lib/auth/on-behalf'
 
 // POST: inscribe un miembro. Body: { member_id, scholarship_id?, coupon_code? }.
 // Autoservicio real: cualquier autenticado puede matricularse a sí mismo; el
-// staff (STUDY_ADMIN_ROLES) puede matricular a otro pasando su member_id
+// staff (GROUP_ADMIN_ROLES) puede matricular a otro pasando su member_id
 // (anti-suplantación vía resolveTargetMemberId).
 export async function POST(
   req: NextRequest,
@@ -25,11 +25,22 @@ export async function POST(
     const { id } = await params
     const { member_id, scholarship_id, coupon_code, override_pago_pendiente, override_restriccion } = await req.json()
     // FRM-4: quién matriculó, si no fue la propia persona.
-    const { memberId: targetMemberId, recordedBy } = resolveOnBehalf(auth.ctx, member_id, STUDY_ADMIN_ROLES)
+    const { memberId: targetMemberId, recordedBy, denegado } = resolveOnBehalf(auth.ctx, member_id, GROUP_ADMIN_ROLES)
+    if (denegado) {
+      return NextResponse.json(
+        { error: 'No tenés permiso para registrar a otra persona.', code: 'sin_permiso_por_otro' },
+        { status: 403 },
+      )
+    }
+
     if (!targetMemberId) return NextResponse.json({ error: 'No se pudo determinar el miembro.' }, { status: 400 })
     // GRU-1: la ventana de matrícula aplica al autoservicio; el staff con
-    // STUDY_ADMIN_ROLES puede matricular fuera de la ventana.
-    const isStaff = auth.ctx.roles.some(r => (STUDY_ADMIN_ROLES as readonly string[]).includes(r) || r === 'admin')
+    // GROUP_ADMIN_ROLES puede matricular fuera de la ventana.
+    // Misma lista que la de arriba: quien puede matricular a otro es quien
+    // administra grupos. Antes acá decía STUDY_ADMIN_ROLES y en la UI el botón
+    // se mostraba con GROUP_ADMIN_ROLES — las dos listas en desacuerdo son lo
+    // que produjo el bug de matricular a la persona equivocada.
+    const isStaff = auth.ctx.roles.some(r => (GROUP_ADMIN_ROLES as readonly string[]).includes(r) || r === 'admin')
     const result = await enrollMember(id, targetMemberId, { scholarship_id, coupon_code }, {
       recordedBy,
       enforceEnrollmentWindow: !isStaff,
@@ -226,7 +237,7 @@ export async function DELETE(
 ) {
     // Simétrico con el POST (Fase 3a): cualquier autenticado puede retirar su
     // PROPIA matrícula (p. ej. cancelar el alta con costo si no completa el
-    // pago); el staff (STUDY_ADMIN_ROLES) puede retirar a otro pasando su
+    // pago); el staff (GROUP_ADMIN_ROLES) puede retirar a otro pasando su
     // member_id. resolveTargetMemberId corta la suplantación. withdrawMember
     // ya protege 'completed' (NO_RETIRABLE) y cancela el pago pendiente.
     const auth = await requireRoles()
@@ -234,7 +245,16 @@ export async function DELETE(
   try {
     const { id } = await params
     const { member_id, reason, tipo } = await req.json()
-    const targetMemberId = resolveTargetMemberId(auth.ctx, member_id, STUDY_ADMIN_ROLES)
+    // Misma lista que el alta: quien administra grupos también da de baja. Y si
+    // pidieron dar de baja a otro sin el rol, se corta — antes se retiraba al
+    // propio actor en silencio.
+    if (pidioPorOtroSinPermiso(auth.ctx, member_id, GROUP_ADMIN_ROLES)) {
+      return NextResponse.json(
+        { error: 'No tenés permiso para sacar del grupo a otra persona.', code: 'sin_permiso_por_otro' },
+        { status: 403 },
+      )
+    }
+    const targetMemberId = resolveTargetMemberId(auth.ctx, member_id, GROUP_ADMIN_ROLES)
     if (!targetMemberId) return NextResponse.json({ error: 'No se pudo determinar el miembro.' }, { status: 400 })
     const malMotivo = withdrawReasonError(typeof reason === 'string' ? reason : null)
     if (malMotivo) {

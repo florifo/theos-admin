@@ -9,18 +9,20 @@ describe('resolveOnBehalf', () => {
   // El caso normal: nadie está actuando por nadie, y no se ensucia la fila.
   it('sin pedir a otro, no deja rastro', () => {
     const r = resolveOnBehalf(ctx(['comunicaciones']), undefined, FORM_ON_BEHALF_ROLES)
-    expect(r).toEqual({ memberId: 'yo', recordedBy: null, esPorOtro: false })
+    expect(r).toEqual({ memberId: 'yo', recordedBy: null, esPorOtro: false, denegado: false })
   })
 
   it('con rol y pidiendo a otro, deja el rastro', () => {
     const r = resolveOnBehalf(ctx(['comunicaciones']), 'otra-persona', FORM_ON_BEHALF_ROLES)
-    expect(r).toEqual({ memberId: 'otra-persona', recordedBy: 'yo', esPorOtro: true })
+    expect(r).toEqual({ memberId: 'otra-persona', recordedBy: 'yo', esPorOtro: true, denegado: false })
   })
 
-  // Anti-suplantación: sin el rol, pedir a otro no hace nada.
-  it('sin rol, el pedido se ignora y queda el propio', () => {
+  // Anti-suplantación. OJO: hasta el 2026-09-08 esta prueba decía "el pedido se
+  // ignora y queda el propio", y eso era justamente el bug — el sistema seguía
+  // adelante con la persona equivocada. Ahora se deniega.
+  it('sin rol, pedir a otro se deniega', () => {
     const r = resolveOnBehalf(ctx(['miembro']), 'otra-persona', FORM_ON_BEHALF_ROLES)
-    expect(r).toEqual({ memberId: 'yo', recordedBy: null, esPorOtro: false })
+    expect(r).toEqual({ memberId: null, recordedBy: null, esPorOtro: false, denegado: true })
   })
 
   it('admin siempre puede', () => {
@@ -33,7 +35,7 @@ describe('resolveOnBehalf', () => {
   // quedaría marcado como "registrado por el staff" sin razón.
   it('pedirse a sí mismo no deja rastro', () => {
     const r = resolveOnBehalf(ctx(['comunicaciones']), 'yo', FORM_ON_BEHALF_ROLES)
-    expect(r).toEqual({ memberId: 'yo', recordedBy: null, esPorOtro: false })
+    expect(r).toEqual({ memberId: 'yo', recordedBy: null, esPorOtro: false, denegado: false })
   })
 
   it('un pedido vacío se trata como no pedido', () => {
@@ -74,5 +76,35 @@ describe('quién puede llenar por otro', () => {
   it('no incluye al miembro ni a solo_lectura', () => {
     expect(FORM_ON_BEHALF_ROLES).not.toContain('miembro')
     expect(FORM_ON_BEHALF_ROLES).not.toContain('solo_lectura')
+  })
+})
+
+// Regresión del 2026-09-08. Karina Padilla tiene editor_grupos_estudio —el rol
+// hecho para administrar grupos— y el botón "Añadir miembro" se le mostraba con
+// esa lista, pero la API validaba con otra. Resultado: elegía a una persona y
+// el sistema LA MATRICULABA A ELLA. Pasó dos veces antes de que se reportara.
+describe('nunca sustituir a la persona en silencio', () => {
+  it('sin el rol, pedir por otro se DENIEGA — no se cambia por el actor', () => {
+    const r = resolveOnBehalf(ctx(['editor_grupos_estudio']), 'la-otra-persona', ['coordinador_estudios'])
+    expect(r.denegado).toBe(true)
+    expect(r.memberId).toBeNull()
+    expect(r.memberId).not.toBe('yo')
+  })
+
+  it('con el rol correcto, sí registra por la otra persona y deja el rastro', () => {
+    const r = resolveOnBehalf(ctx(['editor_grupos_estudio']), 'la-otra-persona', ['editor_grupos_estudio'])
+    expect(r).toEqual({ memberId: 'la-otra-persona', recordedBy: 'yo', esPorOtro: true, denegado: false })
+  })
+
+  it('el autoservicio no se ve afectado: sin member_id, es uno mismo', () => {
+    const r = resolveOnBehalf(ctx(['miembro']), undefined, ['coordinador_estudios'])
+    expect(r.denegado).toBe(false)
+    expect(r.memberId).toBe('yo')
+  })
+
+  it('mandar el propio member_id tampoco se deniega', () => {
+    const r = resolveOnBehalf(ctx(['miembro']), 'yo', ['coordinador_estudios'])
+    expect(r.denegado).toBe(false)
+    expect(r.memberId).toBe('yo')
   })
 })

@@ -76,7 +76,14 @@ export async function POST(req: NextRequest) {
     const reason = typeof body?.reason === 'string' ? body.reason.trim() : ''
     // FRM-4: además de a nombre de quién, se guarda QUIÉN la digitó. Esto ya
     // se podía hacer desde la pantalla de solicitudes y no dejaba rastro.
-    const { memberId, recordedBy } = resolveOnBehalf(auth.ctx, body?.member_id, ['coordinador_estudios', 'coordinador_dirigentes'])
+    const { memberId, recordedBy, denegado } = resolveOnBehalf(auth.ctx, body?.member_id, ['coordinador_estudios', 'coordinador_dirigentes'])
+    if (denegado) {
+      return NextResponse.json(
+        { error: 'No tenés permiso para registrar a otra persona.', code: 'sin_permiso_por_otro' },
+        { status: 403 },
+      )
+    }
+
     if (typeof body?.member_id === 'string' && body.member_id && body.member_id !== memberId) {
       return NextResponse.json(
         { error: 'No podés crear solicitudes a nombre de otro miembro' },

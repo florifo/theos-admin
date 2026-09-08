@@ -78,7 +78,14 @@ export async function POST(
     const rolesPorOtro = conGrant
       ? [...FORM_ON_BEHALF_ROLES, ...(auth.ctx.roles as RoleId[])]  // el grant habilita a esta sesión
       : FORM_ON_BEHALF_ROLES
-    const { memberId, recordedBy } = resolveOnBehalf(auth.ctx, body?.member_id, rolesPorOtro)
+    const { memberId, recordedBy, denegado } = resolveOnBehalf(auth.ctx, body?.member_id, rolesPorOtro)
+    if (denegado) {
+      return NextResponse.json(
+        { error: 'No tenés permiso para registrar a otra persona.', code: 'sin_permiso_por_otro' },
+        { status: 403 },
+      )
+    }
+
     if (typeof body?.member_id === 'string' && body.member_id && body.member_id !== memberId) {
       return NextResponse.json(
         { error: 'No podés registrar respuestas a nombre de otro miembro' },

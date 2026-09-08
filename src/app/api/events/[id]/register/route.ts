@@ -51,7 +51,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     // FRM-4: quién inscribió, si no fue la propia persona.
-    const { memberId, recordedBy } = resolveOnBehalf(auth.ctx, cuerpo?.member_id as string | undefined, EVENT_ON_BEHALF_ROLES)
+    const { memberId, recordedBy, denegado } = resolveOnBehalf(auth.ctx, cuerpo?.member_id as string | undefined, EVENT_ON_BEHALF_ROLES)
+    if (denegado) {
+      return NextResponse.json(
+        { error: 'No tenés permiso para registrar a otra persona.', code: 'sin_permiso_por_otro' },
+        { status: 403 },
+      )
+    }
+
     if (!memberId) return NextResponse.json({ error: 'No se pudo determinar el miembro.' }, { status: 400 })
 
     const scholarshipId = cuerpo?.scholarship_id as string | undefined

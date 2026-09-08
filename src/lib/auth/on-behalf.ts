@@ -19,6 +19,19 @@ export type OnBehalfResult = {
   recordedBy: string | null
   /** true si el actor está registrando por otro. */
   esPorOtro: boolean
+  /**
+   * Pidieron registrar a OTRA persona y el actor no tiene el rol para hacerlo.
+   * El caller DEBE cortar con 403 en vez de seguir.
+   *
+   * Antes esto no existía y la función simplemente devolvía al actor. Suena
+   * defensivo, pero convierte un problema de permisos en datos equivocados:
+   * caso real del 2026-09-08, Karina Padilla —que tiene editor_grupos_estudio,
+   * el rol hecho para administrar grupos— elegía a una persona en "Añadir
+   * miembro" y el sistema LA MATRICULABA A ELLA, sin ningún error. Pasó dos
+   * veces (8 de setiembre y 31 de agosto) y hubo que cancelar las matrículas a
+   * mano. Sustituir a la persona en silencio nunca es la respuesta correcta.
+   */
+  denegado: boolean
 }
 
 /**
@@ -38,10 +51,14 @@ export function resolveOnBehalf(
   const puede = ctx.roles.includes('admin') || privilegedRoles.some(r => ctx.roles.includes(r))
   const pedido = typeof requested === 'string' && requested ? requested : null
 
-  if (!puede || !pedido || pedido === propio) {
-    return { memberId: pedido && puede ? pedido : propio, recordedBy: null, esPorOtro: false }
+  // Pidieron a otro y el actor no puede: NO se sustituye, se deniega.
+  if (pedido && pedido !== propio && !puede) {
+    return { memberId: null, recordedBy: null, esPorOtro: false, denegado: true }
   }
-  return { memberId: pedido, recordedBy: propio, esPorOtro: true }
+  if (!puede || !pedido || pedido === propio) {
+    return { memberId: pedido && puede ? pedido : propio, recordedBy: null, esPorOtro: false, denegado: false }
+  }
+  return { memberId: pedido, recordedBy: propio, esPorOtro: true, denegado: false }
 }
 
 /** Quién puede llenar un FORMULARIO a nombre de otro (FRM-4 punto 2).

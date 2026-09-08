@@ -77,6 +77,24 @@ export function resolveTargetMemberId(
 }
 
 /**
+ * ¿Pidieron actuar sobre OTRA persona sin tener el rol para hacerlo?
+ *
+ * Se usa junto a resolveTargetMemberId para cortar con 403 en vez de seguir con
+ * el actor. La sustitución silenciosa no es una protección: es un cambio de
+ * sujeto. Caso real del 2026-09-08 en el alta a un grupo — se elegía a una
+ * persona y se matriculaba a quien estaba operando (ver on-behalf.ts).
+ */
+export function pidioPorOtroSinPermiso(
+  ctx: AuthContext,
+  requested: unknown,
+  privilegedRoles: RoleId[],
+): boolean {
+  const pedido = typeof requested === 'string' && requested ? requested : null
+  if (!pedido || pedido === ctx.memberId) return false
+  return !(ctx.roles.includes('admin') || privilegedRoles.some(r => ctx.roles.includes(r)))
+}
+
+/**
  * Guard por PERMISO de módulo (espejo server-side de can() del cliente):
  * pasa si alguno de los roles del usuario otorga la acción sobre el módulo
  * (o sobre 'all', como admin/solo_lectura). A diferencia de requireRoles,
