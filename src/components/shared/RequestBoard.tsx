@@ -24,7 +24,7 @@ import { formatDate, formatDateNumeric, getInitials } from '@/lib/format'
 // 'escalated' lo usa hoy solo el tablero de evaluaciones (DIR-5) y aparece
 // únicamente si el consumidor pasa `allowEscalate`. Estudios y finanzas no lo
 // tienen en el CHECK de su tabla, así que para ellos no existe.
-export type RequestStatus = 'open' | 'in_review' | 'escalated' | 'resolved' | 'rejected'
+export type RequestStatus = 'open' | 'in_review' | 'escalated' | 'resolved' | 'rejected' | 'vencida'
 
 export type BaseRequest = {
   id: string
@@ -53,6 +53,9 @@ export const REQUEST_STATUS_BADGE: Record<RequestStatus, { label: string; cls: s
   escalated: { label: 'Escalada',    cls: 'bg-[rgba(155,127,212,0.18)] text-[#6B4FA0]' },
   resolved:  { label: 'Resuelta',    cls: 'bg-success/12 text-success' },
   rejected:  { label: 'Rechazada',   cls: 'bg-surface-low text-navy-light/80' },
+  // Se venció el bloque de matrícula para el que servía. No es un rechazo: la
+  // persona puede volver a pedirla en el bloque siguiente.
+  vencida:   { label: 'Vencida',     cls: 'bg-navy/5 text-navy-light/80' },
 }
 
 // Orden: estados activos primero, "Todas" al final. Default al entrar: Abiertas.
@@ -99,6 +102,14 @@ type Props<R extends BaseRequest> = {
    *  grupo destino de una reubicación). `onChange` se llama con el payload a
    *  fusionar en el PATCH, o `null` mientras no sea válido — bloquea el submit. */
   renderResolveExtra?: (r: R, onChange: (payload: Record<string, unknown> | null) => void) => React.ReactNode
+  /** Cambio de estado A MANO (coordinación). Se dibuja aparte de las acciones:
+   *  aparece también en tableros de solo lectura y en solicitudes ya cerradas,
+   *  que es justo donde hacía falta — una de interés nacía 'open' y no había
+   *  forma de moverla. `opciones` devuelve [] para no ofrecer nada en esa fila. */
+  cambiarEstado?: {
+    opciones: (r: R) => { value: string; label: string }[]
+    onChange: (r: R, status: string) => void
+  }
   /** EST-6: tablero de SOLO LECTURA (datos de demanda) — oculta Tomar/Asignar/
    *  Resolver/Rechazar. El API además rechaza acciones para esos tipos. */
   readOnly?: boolean
@@ -114,7 +125,7 @@ type Props<R extends BaseRequest> = {
 }
 
 export function RequestBoard<R extends BaseRequest>({
-  requests, loading, tabs, typeLabel, endpointBase, onUpdated, renderDetails, renderResolveHint, renderResolveExtra, assigneesUrl, readOnly,
+  requests, loading, tabs, typeLabel, endpointBase, onUpdated, renderDetails, renderResolveHint, renderResolveExtra, assigneesUrl, cambiarEstado, readOnly,
   allowEscalate, closeBlockedReason,
 }: Props<R>) {
   const toast = useToast()
@@ -462,6 +473,41 @@ export function RequestBoard<R extends BaseRequest>({
 
                               {/* Pista de resolución (ej. crear beca/devolución real) */}
                               {r.status === 'resolved' && renderResolveHint?.(r)}
+
+                              {/* Cambio de estado a mano. Va FUERA del bloque de
+                                  acciones a propósito: se ofrece aunque el
+                                  tablero sea de solo lectura y aunque la
+                                  solicitud ya esté cerrada. */}
+                              {(() => {
+                                const opciones = cambiarEstado?.opciones(r) ?? []
+                                if (opciones.length === 0) return null
+                                return (
+                                  <div className="flex items-center gap-2 flex-wrap pt-1">
+                                    <label
+                                      htmlFor={`estado-${r.id}`}
+                                      className="text-[11px] tracking-widest uppercase text-navy-light/80 font-display"
+                                    >
+                                      Cambiar estado
+                                    </label>
+                                    <select
+                                      id={`estado-${r.id}`}
+                                      value=""
+                                      disabled={submitting}
+                                      onChange={e => {
+                                        const v = e.target.value
+                                        e.target.value = ''
+                                        if (v) cambiarEstado!.onChange(r, v)
+                                      }}
+                                      className="rounded-full border border-[var(--outline-variant)] bg-surface-card px-3 py-1.5 text-[13px] text-navy font-body disabled:opacity-60"
+                                    >
+                                      <option value="">Elegir…</option>
+                                      {opciones.map(o => (
+                                        <option key={o.value} value={o.value}>{o.label}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                )
+                              })()}
 
                               {/* Acciones (ocultas en tableros de solo lectura, EST-6) */}
                               {!readOnly && ACTIVE_STATUSES.includes(r.status) && (

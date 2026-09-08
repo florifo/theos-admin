@@ -4,6 +4,9 @@ import {
   updateStudyRequestStatus, assignStudyRequest, resolveStudyRequest, isStudyCommitteeMember,
 } from '@/lib/supabase/queries/study-requests'
 import { requestQueueScope, canAssignRequests, canWorkRequest } from '@/lib/studies/request-assignment'
+import { motivoQueImpide, ESTADOS_MOVIBLES } from '@/lib/studies/request-status-change'
+import { createAdminClient } from '@/lib/supabase/admin'
+import type { StudyRequestStatus } from '@/types/study'
 
 const ACTIONS: Record<string, 'in_review' | 'rejected'> = {
   take: 'in_review',
@@ -122,9 +125,36 @@ export async function PATCH(
       }
     }
 
+    // Cambio de estado A MANO. Solo coordinación (decisión 2026-09-08): el
+    // comité trabaja lo suyo con las acciones de arriba. Existe porque una
+    // solicitud de interés nacía 'open' y no había cómo cerrarla ni reabrirla.
+    if (body?.action === 'set_status') {
+      if (!canAssignRequests(auth.ctx.roles)) {
+        return NextResponse.json(
+          { error: 'Solo la coordinación puede cambiar el estado a mano.' }, { status: 403 },
+        )
+      }
+      const { data: actual } = await createAdminClient()
+        .from('study_requests').select('status, request_type').eq('id', id).maybeSingle()
+      const fila = actual as { status: string; request_type: string } | null
+      if (!fila) return NextResponse.json({ error: 'Solicitud no encontrada' }, { status: 404 })
+
+      const motivo = motivoQueImpide({
+        requestType: fila.request_type, from: fila.status, to: String(body?.status ?? ''),
+      })
+      if (motivo) return NextResponse.json({ error: motivo, code: 'transicion_invalida' }, { status: 409 })
+
+      const updated = await updateStudyRequestStatus(
+        id, body.status as StudyRequestStatus, auth.ctx.memberId,
+        typeof body?.review_notes === 'string' ? body.review_notes.trim() || null : null,
+        ESTADOS_MOVIBLES,
+      )
+      return NextResponse.json(updated)
+    }
+
     const status = ACTIONS[body?.action as string]
     if (!status) {
-      return NextResponse.json({ error: 'action debe ser take, assign, resolve o reject' }, { status: 400 })
+      return NextResponse.json({ error: 'action debe ser take, assign, resolve, reject o set_status' }, { status: 400 })
     }
 
     const updated = await updateStudyRequestStatus(

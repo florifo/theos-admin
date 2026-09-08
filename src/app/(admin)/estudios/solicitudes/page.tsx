@@ -4,6 +4,16 @@ import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Lock, Loader2, ArrowRight, MapPin, Clock, BookOpen, Plus, X, Calendar, CheckCircle2, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
+import { useToast } from '@/components/shared/Toast'
+import { canAssignRequests } from '@/lib/studies/request-assignment'
+import { ESTADOS_MOVIBLES, estadosDestino } from '@/lib/studies/request-status-change'
+import { REQUEST_STATUS_BADGE } from '@/components/shared/RequestBoard'
+
+/** Etiqueta de cada estado — la misma del badge, para que el selector y la
+ *  insignia no digan cosas distintas. */
+const ESTADO_LABEL: Record<string, string> = Object.fromEntries(
+  Object.entries(REQUEST_STATUS_BADGE).map(([k, v]) => [k, v.label]),
+)
 import { Modal } from '@/components/shared/Modal'
 import { MemberCombobox, type MemberHit } from '@/components/shared/MemberCombobox'
 import { RequestBoard } from '@/components/shared/RequestBoard'
@@ -37,6 +47,7 @@ function classLabel(v: string | null): string {
 
 export default function SolicitudesPage() {
   const { user, loaded } = useAuth()
+  const toast = useToast()
   const [requests, setRequests] = useState<StudyRequest[]>([])
   const [loading, setLoading] = useState(true)
   const [reloadKey, setReloadKey] = useState(0)
@@ -118,6 +129,25 @@ export default function SolicitudesPage() {
     )
   }
 
+  // Quién puede mover estados a mano: la misma lista que puede asignar.
+  const puedeCambiarEstados = canAssignRequests(user?.roles ?? [])
+
+  async function cambiarEstadoDeSolicitud(id: string, status: string) {
+    try {
+      const res = await fetch(`/api/studies/requests/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'set_status', status }),
+      })
+      const data = await res.json().catch(() => null)
+      if (!res.ok) throw new Error(data?.error || 'No se pudo cambiar el estado.')
+      setRequests(prev => prev.map(r => (r.id === data.id ? data : r)))
+      toast(`Estado cambiado a «${ESTADO_LABEL[status] ?? status}».`, 'success')
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'No se pudo cambiar el estado.', 'error')
+    }
+  }
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -172,6 +202,18 @@ export default function SolicitudesPage() {
         readOnly={section === 'study_interest'}
         assigneesUrl={section === 'study_interest' || !fullQueue ? undefined : '/api/studies/requests/assignees'}
         onUpdated={updated => setRequests(prev => prev.map(r => (r.id === updated.id ? updated : r)))}
+        // Cambio de estado a mano: SOLO coordinación (decisión 2026-09-08). El
+        // comité trabaja lo asignado con las acciones de siempre. Se ofrece
+        // también en el tablero de intereses, que es de solo lectura y era
+        // justo donde las solicitudes se quedaban 'Abierta' para siempre.
+        cambiarEstado={puedeCambiarEstados ? {
+          opciones: r => (ESTADOS_MOVIBLES as readonly string[]).includes(r.status)
+            ? estadosDestino(r.request_type)
+                .filter(e => e !== r.status)
+                .map(e => ({ value: e, label: ESTADO_LABEL[e] }))
+            : [],
+          onChange: (r, status) => { void cambiarEstadoDeSolicitud(r.id, status) },
+        } : undefined}
         renderDetails={r => (
           <>
             {r.request_type === 'relocation' && (

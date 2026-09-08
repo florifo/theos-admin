@@ -156,7 +156,7 @@ export type RelocationRequest = {
 
 // 'study_interest' consolida los viejos 'new_group'/'join_group' (migración 050).
 export type StudyRequestType = 'relocation' | 'study_interest'
-export type StudyRequestStatus = 'open' | 'in_review' | 'resolved' | 'rejected'
+export type StudyRequestStatus = 'open' | 'in_review' | 'resolved' | 'rejected' | 'vencida'
 
 export type StudyRequestHistoryEntry = {
   from_status: StudyRequestStatus | null

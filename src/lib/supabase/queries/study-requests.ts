@@ -226,6 +226,10 @@ export async function updateStudyRequestStatus(
   status: StudyRequestStatus,
   reviewedBy: string,
   reviewNotes?: string | null,
+  /** Desde qué estados se acepta la transición. Por defecto solo los abiertos
+   *  —una resuelta no se re-toma—; el cambio de estado a mano del coordinador
+   *  pasa una lista más amplia (ver request-status-change.ts). */
+  desde: readonly StudyRequestStatus[] = ['open', 'in_review'],
 ): Promise<StudyRequest> {
   const supabase = createAdminClient()
 
@@ -252,7 +256,7 @@ export async function updateStudyRequestStatus(
     .from('study_requests')
     .update(patch as Updatable<'study_requests'>)
     .eq('id', id)
-    .in('status', ['open', 'in_review'])
+    .in('status', desde as string[])
     .select(REQUEST_SELECT)
     .maybeSingle()
   if (error) throw error
