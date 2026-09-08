@@ -1,6 +1,7 @@
 // Mapea el payload del form de eventos (nuevo/editar) a columnas DB + sub-eventos.
 
 import type { EventWriteInput } from '@/lib/supabase/queries/events'
+import { paredAIso, zonaValida } from './timezone'
 import { computeSurveySendAt } from '@/lib/events/survey-schedule'
 
 /** Combina fecha (YYYY-MM-DD) + hora (HH:mm) en un ISO timestamptz, o null.
@@ -20,19 +21,20 @@ import { computeSurveySendAt } from '@/lib/events/survey-schedule'
  *
  *  El hermano `endOfDayCR` de abajo ya lo hacía bien; esta función se había
  *  quedado atrás. */
-const ZONA_CR = '-06:00'
-
-function combineDateTime(date?: string, time?: string): string | null {
+/* La hora que se teclea en el formulario es la hora LOCAL DEL EVENTO, no la de
+ * quien la escribe: una charla de Madrid se define en hora de Madrid. Antes esto
+ * era el literal '-06:00', que para Costa Rica es exacto y para España se corre
+ * una hora medio año. */
+function combineDateTime(zona: string, date?: string, time?: string): string | null {
   if (!date) return null
-  const hhmm = (time && /^\d{2}:\d{2}/.test(time) ? time : '00:00').slice(0, 5)
-  return new Date(`${date}T${hhmm}:00${ZONA_CR}`).toISOString()
+  return paredAIso(zona, date, time ?? '00:00')
 }
 
-/** Fin de la recurrencia: último día completo en que aplica (23:59:59 hora CR
- *  fija, UTC-6), para que la ocurrencia de ese día no quede excluida. */
-function endOfDayCR(date?: string): string | null {
+/** Fin de la recurrencia: último día completo en que aplica (23:59:59 hora del
+ *  evento), para que la ocurrencia de ese día no quede excluida. */
+function endOfDay(zona: string, date?: string): string | null {
   if (!date) return null
-  return new Date(`${date}T23:59:59${ZONA_CR}`).toISOString()
+  return paredAIso(zona, date, '23:59')
 }
 
 const num = (v: unknown) => (v === '' || v == null ? null : Number(v))
@@ -55,19 +57,21 @@ export function formToSubEvents(body: Record<string, unknown>): { name: string; 
 
 /** Payload completo para crear. */
 export function formToWriteInput(body: Record<string, unknown>): EventWriteInput {
+  const zona = zonaValida(body.timezone as string)
   return {
     title: String(body.name ?? ''),
     event_type: String(body.event_type ?? ''),
     description: (body.description as string) || null,
-    starts_at: combineDateTime(body.start_date as string, body.start_time as string) ?? new Date().toISOString(),
-    ends_at: combineDateTime(body.end_date as string, body.end_time as string),
+    timezone: zona,
+    starts_at: combineDateTime(zona, body.start_date as string, body.start_time as string) ?? new Date().toISOString(),
+    ends_at: combineDateTime(zona, body.end_date as string, body.end_time as string),
     location: (body.location as string) || null,
     location_url: (body.location_map_url as string) || null,
     is_virtual: Boolean(body.is_virtual),
     virtual_url: (body.virtual_link as string) || null,
     is_recurring: Boolean(body.is_recurring),
     recurrence_rule: (body.recurrence_rule as string) || null,
-    recurrence_end: endOfDayCR(body.recurrence_end as string),
+    recurrence_end: endOfDay(zona, body.recurrence_end as string),
     requires_registration: Boolean(body.requires_registration),
     // Sin el campo en el body se asume PÚBLICO, que es el default de la columna
     // y lo que hacían todos los eventos hasta ahora.
@@ -106,7 +110,7 @@ export function formToSurvey(body: Record<string, unknown>): Pick<EventWriteInpu
       survey_offset_hours: null, survey_send_at: null,
     }
   }
-  const endsAt = combineDateTime(body.end_date as string, body.end_time as string)
+  const endsAt = combineDateTime(zonaValida(body.timezone as string), body.end_date as string, body.end_time as string)
   const offset = body.survey_offset_hours == null || body.survey_offset_hours === ''
     ? null
     : Number(body.survey_offset_hours)
@@ -135,7 +139,7 @@ export function formToPartialWriteInput(body: Record<string, unknown>): Partial<
     requires_registration: 'requires_registration', max_capacity: 'max_capacity',
     is_public: 'is_public',
     requires_payment: 'requires_payment', payment_amount: 'payment_amount',
-    currency: 'currency', sede_id: 'sede_id',
+    currency: 'currency', sede_id: 'sede_id', timezone: 'timezone',
     server_price: 'server_price', servers_pay: 'servers_pay',
     has_satisfaction_survey: 'requires_survey', flyer: 'flyer_url', status: 'status',
   }
@@ -145,6 +149,11 @@ export function formToPartialWriteInput(body: Record<string, unknown>): Partial<
   // fechas: si vienen, recomputar starts_at/ends_at
   if ('start_date' in body) out.starts_at = full.starts_at
   if ('end_date' in body) out.ends_at = full.ends_at
+  // OJO: cambiar la zona SIN reenviar la fecha y la hora deja el instante como
+  // estaba. El formulario de edición siempre manda las dos cosas juntas, así
+  // que en la práctica no pasa; recomputar acá sería peor, porque
+  // `recurrence_end` se recalcula desde el body y un body sin ese campo lo
+  // dejaría en null — borrando el fin de la serie.
 
   // EVE-4 · La encuesta se recalcula EN BLOQUE si el body toca cualquiera de
   // sus piezas —o si movieron el fin del evento, porque el momento guardado

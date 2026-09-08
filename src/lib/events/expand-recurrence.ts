@@ -10,6 +10,7 @@
  * Reglas inválidas no rompen: se loguea y se muestra solo la instancia original.
  */
 import { RRule, Weekday } from 'rrule'
+import { aParedUTC, deParedUTC, ymdEnZona, zonaValida } from './timezone'
 
 type RecurringLike = {
   id: string
@@ -18,19 +19,15 @@ type RecurringLike = {
   is_recurring: boolean
   recurrence_rule: string | null
   recurrence_end?: string | null
-  /** Fechas YYYY-MM-DD (hora CR) a excluir de la serie (EXDATE/override). */
+  /** Fechas YYYY-MM-DD (hora del evento) a excluir de la serie (EXDATE/override). */
   exception_dates?: string[]
+  /** Zona IANA en la que está definida la hora. Ausente = Costa Rica. */
+  timezone?: string | null
 }
 
-/** Costa Rica es UTC-6 FIJO (sin horario de verano): el corrimiento es una
- *  constante, independiente de la zona del runtime. Antes estos helpers usaban
- *  los componentes locales del proceso, y en el servidor (Vercel = UTC) las
- *  ocurrencias caían un día corrido. */
-const CR_OFFSET_MS = 6 * 3600_000
-
-/** Fecha en hora CR → 'YYYY-MM-DD'. */
-function localYmd(d: Date): string {
-  return new Date(d.getTime() - CR_OFFSET_MS).toISOString().slice(0, 10)
+/** Fecha → 'YYYY-MM-DD' en la zona del evento. */
+function localYmd(zona: string, d: Date): string {
+  return ymdEnZona(zona, d)
 }
 
 export type Occurrence<T extends RecurringLike> = T & {
@@ -54,15 +51,22 @@ const DAY_LABEL: Record<string, string> = {
 }
 
 /* rrule calcula los días de semana sobre el día UTC, pero las charlas son por
- * la noche hora CR (UTC-6): un martes 19:00 CR es miércoles 01:00 UTC y la
- * regla "WEEKLY:TUE" generaría lunes locales. Truco estándar: correr el
- * instante -6h para que sus componentes UTC sean la hora de pared CR, iterar
- * ahí y deshacer. Como CR no tiene DST, el corrimiento constante es exacto. */
-function toFakeUTC(d: Date): Date {
-  return new Date(d.getTime() - CR_OFFSET_MS)
+ * la noche hora local: un martes 19:00 en Costa Rica es miércoles 01:00 UTC y
+ * la regla "WEEKLY:TUE" generaría lunes. Truco estándar: correr el instante
+ * hasta que sus componentes UTC sean la HORA DE PARED de la zona, iterar ahí y
+ * deshacer.
+ *
+ * Antes el corrimiento era la constante -6h. Con Costa Rica daba exacto —no
+ * tiene horario de verano—, pero para Madrid no: el desfase cambia dos veces al
+ * año, y con una constante toda la serie se corría una hora medio año. Ahora
+ * cada conversión pregunta el desfase QUE CORRESPONDE A ESE INSTANTE, así que
+ * "todos los domingos al mediodía de Madrid" sigue siendo el mediodía también
+ * después del cambio de horario. */
+function toFakeUTC(zona: string, d: Date): Date {
+  return aParedUTC(zona, d)
 }
-function fromFakeUTC(d: Date): Date {
-  return new Date(d.getTime() + CR_OFFSET_MS)
+function fromFakeUTC(zona: string, d: Date): Date {
+  return deParedUTC(zona, d)
 }
 
 function parseRule(rule: string, dtstart: Date, until: Date): RRule | null {
@@ -86,12 +90,13 @@ function parseRule(rule: string, dtstart: Date, until: Date): RRule | null {
 /** Ocurrencias virtuales de un evento recurrente dentro del rango [from, to). */
 export function expandRecurring<T extends RecurringLike>(event: T, from: Date, to: Date): Array<Occurrence<T>> {
   if (!event.is_recurring || !event.recurrence_rule) return []
+  const zona = zonaValida(event.timezone)
   const realStart = new Date(event.start_at)
-  const dtstart = toFakeUTC(realStart)
+  const dtstart = toFakeUTC(zona, realStart)
   const durationMs = Math.max(0, new Date(event.end_at).getTime() - realStart.getTime())
   const until = event.recurrence_end ? new Date(event.recurrence_end) : to
 
-  const rule = parseRule(event.recurrence_rule, dtstart, toFakeUTC(until < to ? until : to))
+  const rule = parseRule(event.recurrence_rule, dtstart, toFakeUTC(zona, until < to ? until : to))
   if (!rule) {
     console.warn(`expandRecurring: regla inválida "${event.recurrence_rule}" en evento ${event.id} — se muestra solo la original`)
     return []
@@ -100,12 +105,12 @@ export function expandRecurring<T extends RecurringLike>(event: T, from: Date, t
   const excepted = new Set(event.exception_dates ?? [])
   try {
     return rule
-      .between(toFakeUTC(from), toFakeUTC(to), true)
-      .map(fromFakeUTC)
+      .between(toFakeUTC(zona, from), toFakeUTC(zona, to), true)
+      .map(d => fromFakeUTC(zona, d))
       // la instancia original ya está en la lista: no duplicarla
       .filter(d => d.getTime() !== realStart.getTime())
       // EXDATE: ocurrencias canceladas o reemplazadas por un override
-      .filter(d => !excepted.has(localYmd(d)))
+      .filter(d => !excepted.has(localYmd(zona, d)))
       .map(d => ({
         ...event,
         start_at: d.toISOString(),
@@ -123,22 +128,23 @@ export function expandRecurring<T extends RecurringLike>(event: T, from: Date, t
  *  Salta las fechas exceptuadas (canceladas/override). */
 export function nextOccurrence(event: RecurringLike, after: Date): Date | null {
   if (!event.is_recurring || !event.recurrence_rule) return null
+  const zona = zonaValida(event.timezone)
   const excepted = new Set(event.exception_dates ?? [])
   const realStart = new Date(event.start_at)
-  if (realStart >= after && !excepted.has(localYmd(realStart))) return realStart
+  if (realStart >= after && !excepted.has(localYmd(zona, realStart))) return realStart
   const until = event.recurrence_end
     ? new Date(event.recurrence_end)
     : new Date(after.getTime() + 366 * 86400000)
-  const rule = parseRule(event.recurrence_rule, toFakeUTC(realStart), toFakeUTC(until))
+  const rule = parseRule(event.recurrence_rule, toFakeUTC(zona, realStart), toFakeUTC(zona, until))
   if (!rule) return null
   try {
     // Itera buscando la primera ocurrencia no exceptuada (límite defensivo).
     let cursor = after
     for (let i = 0; i < 200; i++) {
-      const next = rule.after(toFakeUTC(cursor), true)
+      const next = rule.after(toFakeUTC(zona, cursor), true)
       if (!next) return null
-      const local = fromFakeUTC(next)
-      if (!excepted.has(localYmd(local))) return local
+      const local = fromFakeUTC(zona, next)
+      if (!excepted.has(localYmd(zona, local))) return local
       cursor = new Date(local.getTime() + 1000) // avanza 1s para no repetir
     }
     return null

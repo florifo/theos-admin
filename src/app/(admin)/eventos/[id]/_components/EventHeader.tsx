@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import {
   ChevronLeft, Calendar, MapPin, Users, Edit2, MoreHorizontal,
-  CalendarPlus, ExternalLink, Download, QrCode, X as XIcon,
+  CalendarPlus, ExternalLink, Download, QrCode, X as XIcon, Globe,
 } from 'lucide-react'
 import { EventTypeBadge } from '@/components/events/EventTypeBadge'
 import { EventStatusBadge } from '@/components/events/EventStatusBadge'
@@ -9,6 +9,7 @@ import { RealizadoBadge } from '@/components/events/RealizadoBadge'
 import { isPastEvent, recurrenceLabel } from '@/lib/events/expand-recurrence'
 import { downloadBlob } from '@/lib/export'
 import { Repeat } from 'lucide-react'
+import { zonaValida, fechaLargaEnZona, horaEnZona, aclaracionDeZona } from '@/lib/events/timezone'
 import type { AdminEvent } from '@/data/event-config'
 
 type Event = AdminEvent
@@ -93,8 +94,8 @@ export function EventHeader({
   canManage = false,
   canCheckin = false,
 }: Props) {
-  const startDate = new Date(event.start_at)
-  const endDate = new Date(event.end_at)
+  const zona = zonaValida(event.timezone)
+  const aclaracion = aclaracionDeZona(event.timezone, event.start_at)
   const occQuery = occParam ? `?date=${encodeURIComponent(occParam)}` : ''
 
   return (
@@ -136,14 +137,24 @@ export function EventHeader({
               {event.name}
             </h1>
             <div className="flex flex-wrap gap-4 text-sm text-white/80 font-body">
+              {/* La fecha y la hora se muestran en la ZONA DEL EVENTO, no en la
+                  del navegador: una charla de Madrid se anuncia a su hora de
+                  Madrid. Cuando no es Costa Rica se agrega la equivalencia,
+                  porque quien administra sí está acá. */}
               <span className="flex items-center gap-1.5">
                 <Calendar size={13} className="text-white/80" />
-                {startDate.toLocaleDateString('es-CR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}
+                {fechaLargaEnZona(zona, event.start_at)}
                 {' · '}
-                {startDate.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })}
+                {horaEnZona(zona, event.start_at)}
                 {' — '}
-                {endDate.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })}
+                {horaEnZona(zona, event.end_at)}
               </span>
+              {aclaracion && (
+                <span className="flex items-center gap-1.5">
+                  <Globe size={13} className="text-white/80" />
+                  {aclaracion}
+                </span>
+              )}
               <span className="flex items-center gap-1.5">
                 <MapPin size={13} className="text-white/80" />
                 {event.location}

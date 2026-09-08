@@ -104,3 +104,46 @@ describe('isPastEvent', () => {
     expect(isPastEvent({ start_at: '2026-07-09T00:00:00Z', end_at: '2026-07-11T00:00:00Z' }, now)).toBe(false)
   })
 })
+
+// Una serie de Madrid cruzando el cambio de horario. Con el desfase fijo de -6h
+// que había antes, todas las ocurrencias posteriores al último domingo de
+// octubre se corrían una hora — y la del propio cambio podía caer otro día.
+describe('serie en otra zona horaria', () => {
+  const charlaMadrid = {
+    id: 'madrid',
+    // Domingo 13 de setiembre de 2026, 12:00 de Madrid (verano: UTC+2).
+    start_at: '2026-09-13T10:00:00.000Z',
+    end_at: '2026-09-13T12:00:00.000Z',
+    is_recurring: true,
+    recurrence_rule: 'WEEKLY:SUN',
+    recurrence_end: '2027-12-31T23:59:59Z',
+    timezone: 'Europe/Madrid',
+  }
+
+  const hhmm = (iso: string, zona: string) =>
+    new Intl.DateTimeFormat('en-GB', { timeZone: zona, hour: '2-digit', minute: '2-digit', hour12: false })
+      .format(new Date(iso))
+
+  it('sigue siendo el mediodía de Madrid después del cambio de horario', () => {
+    const occ = expandRecurring(charlaMadrid, new Date('2026-10-01T00:00:00Z'), new Date('2026-12-01T00:00:00Z'))
+    expect(occ.length).toBeGreaterThan(6)
+    for (const o of occ) expect(hhmm(o.start_at, 'Europe/Madrid')).toBe('12:00')
+  })
+
+  it('y por eso en Costa Rica SÍ cambia: 4:00am en octubre, 5:00am en noviembre', () => {
+    const occ = expandRecurring(charlaMadrid, new Date('2026-10-01T00:00:00Z'), new Date('2026-12-01T00:00:00Z'))
+    const oct = occ.find(o => o.start_at < '2026-10-25')!
+    const nov = occ.find(o => o.start_at > '2026-11-01')!
+    expect(hhmm(oct.start_at, 'America/Costa_Rica')).toBe('04:00')
+    expect(hhmm(nov.start_at, 'America/Costa_Rica')).toBe('05:00')
+  })
+
+  it('todas caen en domingo, no se corre el día', () => {
+    const occ = expandRecurring(charlaMadrid, new Date('2026-09-14T00:00:00Z'), new Date('2026-12-01T00:00:00Z'))
+    for (const o of occ) {
+      const dia = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', weekday: 'short' })
+        .format(new Date(o.start_at))
+      expect(dia).toBe('Sun')
+    }
+  })
+})

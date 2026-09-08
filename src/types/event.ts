@@ -68,6 +68,10 @@ export type AdminEvent = {
   event_type: EventType
   description: string
   start_at: string
+  /** Zona IANA en la que se define la hora del evento. Costa Rica por defecto;
+   *  las sedes de España usan Europe/Madrid. `start_at` sigue siendo el
+   *  instante real — la zona dice cómo interpretarlo y cómo mostrarlo. */
+  timezone?: string | null
   end_at: string
   location: string
   location_map_url: string | null

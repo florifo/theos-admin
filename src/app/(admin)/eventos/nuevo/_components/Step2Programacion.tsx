@@ -3,6 +3,7 @@ import { RecurrenceSelector } from '@/components/events/RecurrenceSelector'
 import { DatePicker } from '@/components/events/DatePicker'
 import { TimePicker } from '@/components/events/TimePicker'
 import { inputCls, Toggle, FieldLabel } from './shared'
+import { ZONAS, ZONA_CR, aclaracionDeZona, paredAIso } from '@/lib/events/timezone'
 
 interface Step2Props {
   start_date: string
@@ -16,6 +17,8 @@ interface Step2Props {
   is_recurring: boolean
   recurrence_rule: string | null
   recurrence_end: string
+  timezone: string
+  onTimezoneChange: (v: string) => void
   onStartDateChange: (v: string) => void
   onStartTimeChange: (v: string) => void
   onEndDateChange: (v: string) => void
@@ -41,6 +44,8 @@ export function Step2Programacion({
   is_recurring,
   recurrence_rule,
   recurrence_end,
+  timezone,
+  onTimezoneChange,
   onStartDateChange,
   onStartTimeChange,
   onEndDateChange,
@@ -57,6 +62,11 @@ export function Step2Programacion({
   const startTs = start_date ? new Date(`${start_date}T${start_time || '00:00'}`).getTime() : null
   const endTs = end_date ? new Date(`${end_date}T${end_time || '00:00'}`).getTime() : null
   const endBeforeStart = startTs !== null && endTs !== null && endTs < startTs
+  // Qué hora es en Costa Rica la que se acaba de teclear. Solo se muestra
+  // cuando el evento no es de acá — para el resto no hay nada que aclarar.
+  const isoTecleado = start_date ? paredAIso(timezone || ZONA_CR, start_date, start_time || '00:00') : null
+  const equivalencia = isoTecleado ? aclaracionDeZona(timezone, isoTecleado) : null
+
   return (
     <div className="card py-5 px-6 w-full">
       <div className="card-title mb-5">Programación y ubicación</div>
@@ -85,6 +95,26 @@ export function Step2Programacion({
               min={end_date && end_date === start_date ? start_time || undefined : undefined}
             />
           </div>
+        </div>
+        {/* Zona horaria: la hora de arriba es la hora LOCAL DEL EVENTO. Casi
+            todos son de Costa Rica y ese es el default; el selector existe por
+            las sedes de España, donde además hay horario de verano y el desfase
+            con Costa Rica cambia dos veces al año. */}
+        <div className="mt-4 max-w-md">
+          <FieldLabel>Zona horaria del evento</FieldLabel>
+          <select
+            className={inputCls}
+            value={timezone || ZONA_CR}
+            onChange={e => onTimezoneChange(e.target.value)}
+            aria-label="Zona horaria en la que se define la hora del evento"
+          >
+            {ZONAS.map(z => <option key={z.id} value={z.id}>{z.label}</option>)}
+          </select>
+          {equivalencia && (
+            <p className="text-[13px] text-navy-light/80 mt-1.5 font-body">
+              La hora que escribís es {equivalencia}.
+            </p>
+          )}
         </div>
         {endBeforeStart && (
           <p className="text-[13px] text-coral mt-2 font-body" role="alert">

@@ -16,6 +16,7 @@ export function toDomainEvent(db: DbEventEnriched): AdminEvent {
     event_type: db.event_type as EventType,
     description: db.description ?? '',
     start_at: db.starts_at,
+    timezone: db.timezone ?? null,
     end_at: db.ends_at ?? db.starts_at,
     location: db.location ?? '',
     location_map_url: db.location_url,

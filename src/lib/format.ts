@@ -36,15 +36,20 @@ export function toYmdLocal(d: Date): string {
  *  evento se CORRÍA SEIS HORAS cada vez que alguien lo abría y guardaba. Los dos
  *  lados tienen que hablar la misma zona o el error se acumula.
  */
-export function crFormParts(iso: string | null | undefined): { date: string; time: string } {
+export function crFormParts(
+  iso: string | null | undefined,
+  /** Zona del evento. Ausente = Costa Rica, que es lo que era antes y lo que
+   *  sigue siendo para todo lo que no es una sede de España. */
+  zona: string = CR_TZ,
+): { date: string; time: string } {
   if (!iso) return { date: '', time: '' }
   const d = new Date(iso)
   if (isNaN(d.getTime())) return { date: '', time: '' }
   return {
     // en-CA formatea como YYYY-MM-DD, que es lo que espera un <input type="date">.
-    date: d.toLocaleDateString('en-CA', { timeZone: CR_TZ }),
+    date: d.toLocaleDateString('en-CA', { timeZone: zona }),
     // en-GB da 24h ("22:00"), que es lo que espera un <input type="time">.
-    time: d.toLocaleTimeString('en-GB', { timeZone: CR_TZ, hour: '2-digit', minute: '2-digit', hour12: false }),
+    time: d.toLocaleTimeString('en-GB', { timeZone: zona, hour: '2-digit', minute: '2-digit', hour12: false }),
   }
 }
 

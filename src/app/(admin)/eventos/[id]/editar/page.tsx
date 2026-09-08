@@ -13,6 +13,7 @@ import { CommitteeMultiSelect } from '@/components/events/CommitteeMultiSelect'
 import { DatePicker } from '@/components/events/DatePicker'
 import { TimePicker } from '@/components/events/TimePicker'
 import { ymdCR, crFormParts, CURRENCIES, currencySymbol, amountStep } from '@/lib/format'
+import { ZONAS, ZONA_CR, zonaValida, aclaracionDeZona, paredAIso } from '@/lib/events/timezone'
 import { useSedes } from '@/lib/sedes'
 import { cn } from '@/lib/utils'
 import { EventManagersPanel } from '../_components/EventManagersPanel'
@@ -161,8 +162,14 @@ export default function EditarEventoPage({ params }: { params: Promise<{ id: str
   // timestamp. Ver crFormParts: partir el ISO con split('T') mostraba la hora
   // UTC y, al guardar, la reinterpretaba como CR — el evento se corría 6 horas
   // en cada edición.
-  const inicioCR = crFormParts(event?.start_at)
-  const finCR = crFormParts(event?.end_at)
+  // …y en la ZONA DEL EVENTO, no siempre en la de Costa Rica: una charla de
+  // Madrid se edita en hora de Madrid. Si los inputs mostraran la hora tica y
+  // al guardar se reinterpretaran como Madrid, el evento se correría 7 u 8
+  // horas en cada edición — el mismo bug de antes, con otro número.
+  const zonaEvento = zonaValida(event?.timezone)
+  const inicioCR = crFormParts(event?.start_at, zonaEvento)
+  const finCR = crFormParts(event?.end_at, zonaEvento)
+  const [timezone, setTimezone] = useState(zonaEvento)
   const [startDate, setStartDate] = useState(inicioCR.date)
   const [startTime, setStartTime] = useState(inicioCR.time)
   const [endDate, setEndDate] = useState(finCR.date)
@@ -308,6 +315,7 @@ export default function EditarEventoPage({ params }: { params: Promise<{ id: str
     const body = {
       name, event_type: selectedType, description,
       organizing_committee_ids: committeeIds,
+      timezone,
       start_date: startDate, start_time: startTime,
       end_date: endDate, end_time: endTime,
       is_virtual: isVirtual, virtual_link: virtualLink, location,
@@ -382,6 +390,10 @@ export default function EditarEventoPage({ params }: { params: Promise<{ id: str
   const startTs = startDate ? new Date(`${startDate}T${startTime || '00:00'}`).getTime() : null
   const endTs = endDate ? new Date(`${endDate}T${endTime || '00:00'}`).getTime() : null
   const endBeforeStart = startTs !== null && endTs !== null && endTs < startTs
+  // Qué hora es en Costa Rica la que muestran los inputs. Null si el evento es
+  // de acá: no hay nada que aclarar.
+  const isoTecleado = startDate ? paredAIso(timezone || ZONA_CR, startDate, startTime || '00:00') : null
+  const equivalenciaZona = isoTecleado ? aclaracionDeZona(timezone, isoTecleado) : null
 
   return (
     <div className="space-y-4">
@@ -531,6 +543,23 @@ export default function EditarEventoPage({ params }: { params: Promise<{ id: str
               <span className="text-[13px] tracking-widest uppercase text-navy-light/80 font-display">Hora fin</span>
               <TimePicker ariaLabel="Hora fin" value={endTime} onChange={setEndTime} error={endBeforeStart} min={endDate && endDate === startDate ? startTime || undefined : undefined} />
             </div>
+          </div>
+          {/* La hora de arriba es la hora LOCAL DEL EVENTO. Ver zonaEvento. */}
+          <div className="space-y-1 max-w-sm">
+            <span className="text-[13px] tracking-widest uppercase text-navy-light/80 font-display">Zona horaria</span>
+            <select
+              className="w-full rounded-xl border border-[var(--outline-variant)] bg-surface-card px-3 py-2.5 text-sm text-navy font-body"
+              value={timezone}
+              onChange={e => setTimezone(e.target.value)}
+              aria-label="Zona horaria en la que se define la hora del evento"
+            >
+              {ZONAS.map(z => <option key={z.id} value={z.id}>{z.label}</option>)}
+            </select>
+            {equivalenciaZona && (
+              <p className="text-[13px] text-navy-light/80 font-body">
+                La hora que ves es {equivalenciaZona}.
+              </p>
+            )}
           </div>
           {endBeforeStart && (
             <p className="text-[13px] text-coral font-body" role="alert">

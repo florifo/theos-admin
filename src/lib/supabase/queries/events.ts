@@ -49,6 +49,8 @@ export type DbEventEnriched = {
   survey_sent_at: string | null
   survey_sent_count: number
   status: EventStatus
+  /** Zona IANA en la que se define la hora (migración 20260908120000). */
+  timezone: string
   cancellation_reason: string | null
   is_active: boolean
   created_at: string
@@ -314,6 +316,8 @@ export async function getEventById(id: string): Promise<DbEventEnriched | null> 
 /** Campos escribibles de un evento (nombres de columna DB). */
 export type EventWriteInput = {
   title: string
+  /** Zona IANA en la que se define la hora del evento (migración 20260908120000). */
+  timezone?: string
   /** INT-3: sede del evento; propone la moneda del cobro en el formulario. */
   sede_id?: string | null
   description?: string | null

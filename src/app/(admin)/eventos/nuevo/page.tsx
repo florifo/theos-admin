@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useRef, useEffect, Suspense } from 'react'
+import { ZONA_CR } from '@/lib/events/timezone'
 import { useSearchParams } from 'next/navigation'
 import { useToast } from '@/components/shared/Toast'
 import { usePermissions } from '@/hooks/usePermissions'
@@ -31,6 +32,7 @@ interface FormData {
   is_public: boolean
   start_date: string
   start_time: string
+  timezone: string
   end_date: string
   end_time: string
   is_virtual: boolean
@@ -123,6 +125,7 @@ function NuevoEventoForm() {
     is_public: true,
     start_date: initialDate,
     start_time: initialStart,
+    timezone: ZONA_CR,
     end_date: initialDate,
     end_time: plusOneHour(initialStart),
     is_virtual: false,
@@ -382,6 +385,8 @@ function NuevoEventoForm() {
               is_recurring={form.is_recurring}
               recurrence_rule={form.recurrence_rule}
               recurrence_end={form.recurrence_end}
+            timezone={form.timezone}
+            onTimezoneChange={v => set('timezone', v)}
               onStartDateChange={v => {
                 setForm(prev => ({
                   ...prev,
