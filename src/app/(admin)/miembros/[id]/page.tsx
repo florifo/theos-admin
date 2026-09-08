@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { Tabs } from '@/components/shared/Tabs'
 import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { openSectionsFromParam } from '@/lib/members/profile-deeplink'
@@ -101,6 +101,27 @@ export default function MiembroDetailPage() {
   function changeTab(tab: string) {
     setActiveTab(tab)
   }
+
+  // Bajar hasta la sección del enlace. Abrirla no alcanza: quien llega desde
+  // "ver su pago pendiente" aterriza arriba del perfil, con la sección
+  // desplegada varias pantallas más abajo, y parece que el enlace no hizo nada.
+  //
+  // Espera a que el perfil esté cargado —antes de eso el acordeón ni existe— y
+  // corre UNA sola vez: si se repitiera, tocar otra sección devolvería la
+  // pantalla de un salto.
+  const yaBajo = useRef(false)
+  const seccionDelEnlace = searchParams.get('open')
+  useEffect(() => {
+    if (yaBajo.current || loading || !member || !seccionDelEnlace) return
+    if (!Object.keys(openSectionsFromParam(seccionDelEnlace)).length) return
+    // Un frame para que el acordeón ya esté pintado.
+    const t = setTimeout(() => {
+      document.getElementById(`seccion-${seccionDelEnlace}`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 120)
+    yaBajo.current = true
+    return () => clearTimeout(t)
+  }, [loading, member, seccionDelEnlace])
 
   async function handleDeactivate() {
     if (deactivating) return

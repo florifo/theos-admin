@@ -47,14 +47,22 @@ function SectionAccordion({
   open,
   onToggle,
   children,
+  sectionKey,
 }: {
   title: string
   open: boolean
   onToggle: () => void
   children: React.ReactNode
+  /** Clave del acordeón, para poder llegar por URL (?open=pagos) y que la
+   *  pantalla baje hasta acá. Sin esto el enlace abría la sección correcta pero
+   *  dejaba a la persona arriba de todo, sin saber que había pasado algo. */
+  sectionKey?: string
 }) {
   return (
-    <div className="rounded-xl overflow-hidden border border-[var(--outline-variant)]">
+    <div
+      id={sectionKey ? `seccion-${sectionKey}` : undefined}
+      // Que no quede tapada por la barra de tabs, que en desktop está pegada.
+      className="rounded-xl overflow-hidden border border-[var(--outline-variant)] scroll-mt-24">
       <button
         type="button"
         onClick={onToggle}
@@ -179,6 +187,7 @@ export function MemberParticipationTab({
       <SectionAccordion
         title="Historial de estudios"
         open={openSections.estudios}
+        sectionKey="estudios"
         onToggle={() => onToggleSection('estudios')}
       >
         {onAddStudy && (
@@ -374,6 +383,7 @@ export function MemberParticipationTab({
       <SectionAccordion
         title="Historial de servicio"
         open={openSections.servicio}
+        sectionKey="servicio"
         onToggle={() => onToggleSection('servicio')}
       >
         {servicioTable.sorted.length === 0 ? (
@@ -443,6 +453,7 @@ export function MemberParticipationTab({
       <SectionAccordion
         title="Asistencia a eventos"
         open={openSections.eventos}
+        sectionKey="eventos"
         onToggle={() => onToggleSection('eventos')}
       >
         {eventosTable.sorted.length === 0 ? (
@@ -601,6 +612,7 @@ export function MemberParticipationTab({
       <SectionAccordion
         title="Mis becas"
         open={openSections.misBecas}
+        sectionKey="misBecas"
         onToggle={() => onToggleSection('misBecas')}
       >
         <MemberScholarshipRequests memberId={memberId} />
@@ -611,6 +623,7 @@ export function MemberParticipationTab({
       <SectionAccordion
         title="Pagos y cobros"
         open={openSections.pagos}
+        sectionKey="pagos"
         onToggle={() => onToggleSection('pagos')}
       >
         <MemberPaymentsList memberId={memberId} />
@@ -620,6 +633,7 @@ export function MemberParticipationTab({
       <SectionAccordion
         title="Donaciones"
         open={openSections.donaciones}
+        sectionKey="donaciones"
         onToggle={() => onToggleSection('donaciones')}
       >
         {hasFinanceRole ? (
