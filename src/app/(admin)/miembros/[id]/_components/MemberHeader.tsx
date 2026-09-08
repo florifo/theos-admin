@@ -5,29 +5,56 @@ import { cn } from '@/lib/utils'
 import type { Member } from '@/types/member'
 import { initialsFromParts, formatDate } from '@/lib/format'
 
-function ActivityIcon({ active, icon: Icon, label, tooltip, activeColor }: {
+/**
+ * Uno de los cinco indicadores del encabezado (donante, servidor, asistente,
+ * estudiante, dirigente).
+ *
+ * EL APAGADO TIENE QUE VERSE APAGADO. Antes el ícono inactivo iba en
+ * navy-light/80 —6,41:1 sobre la tarjeta, o sea bien oscuro— así que se leía
+ * como encendido y el único indicio era que no tenía color de marca. Ahora va
+ * en /30 (1,76:1 medido con lib/contrast): un gris muy claro que no se puede
+ * confundir. Ese contraste bajísimo es correcto acá porque el ícono es
+ * DECORATIVO —va aria-hidden— y quien lleva el significado es la etiqueta de
+ * abajo, que se queda en /80 y sí pasa AA.
+ *
+ * Y como la diferencia no puede ser solo el color: el tooltip ahora también
+ * aparece apagado y dice por qué, y el estado va en el aria-label para quien
+ * no ve la pantalla.
+ */
+function ActivityIcon({ active, icon: Icon, label, tooltip, inactiveTooltip, activeColor }: {
   active: boolean
   icon: React.ElementType
   label: string
   tooltip: string
+  /** Qué decir cuando está apagado. Por defecto, "Sin <etiqueta en minúscula>". */
+  inactiveTooltip?: string
   activeColor: string
 }) {
   const [show, setShow] = useState(false)
+  const texto = active ? tooltip : (inactiveTooltip ?? `Sin ${label.toLowerCase()}`)
   return (
     <div className="flex flex-col items-center gap-1">
       <div
         className="relative inline-flex"
         onMouseEnter={() => setShow(true)}
         onMouseLeave={() => setShow(false)}
+        role="img"
+        aria-label={`${label}: ${active ? 'sí' : 'no'}`}
       >
-        <Icon size={18} strokeWidth={1.75} className={cn('transition-colors', active ? activeColor : 'text-navy-light/80')} />
-        {show && active && (
+        <Icon
+          size={18} strokeWidth={1.75} aria-hidden
+          className={cn('transition-colors', active ? activeColor : 'text-navy-light/30')}
+        />
+        {show && (
           <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 whitespace-nowrap rounded-md bg-navy px-2 py-1 text-[11px] text-white z-50 shadow-[var(--shadow-md)]">
-            {tooltip}
+            {texto}
           </div>
         )}
       </div>
-      <span className={cn('text-[11px] font-body', active ? 'text-navy-light/80' : 'text-navy-light/80')}>{label}</span>
+      {/* La ETIQUETA se queda en /80 encendida o apagada: es texto informativo y
+          el mínimo del sistema es ese (en /40 daba 2,20:1 y no pasa AA). Lo que
+          se apaga es el ícono, que es decorativo. */}
+      <span className="text-[11px] font-body text-navy-light/80">{label}</span>
     </div>
   )
 }
@@ -44,10 +71,16 @@ function MemberActivityIcons({ member }: { member: Member }) {
     : 'Asistencia activa (≥6 charlas en 6 meses, con al menos una en los últimos 60 días)'
   return (
     <div className="mt-3 flex items-center gap-5">
-      <ActivityIcon active={member.is_donor} icon={Heart} label="Donante" activeColor="text-coral" tooltip="Donante" />
-      <ActivityIcon active={member.is_server} icon={Hammer} label="Servidor" activeColor="text-teal-deep" tooltip={committee ? `Servidor en ${committee}` : 'Servidor activo'} />
-      <ActivityIcon active={attendanceActive} icon={CalendarCheck} label="Asistente" activeColor="text-navy" tooltip={attendanceTooltip} />
-      <ActivityIcon active={studyingActive} icon={BookOpen} label="Estudiante" activeColor="text-coral" tooltip={member.current_study ? `Estudiando ${member.current_study}` : 'Estudiante activo'} />
+      <ActivityIcon active={member.is_donor} icon={Heart} label="Donante" activeColor="text-coral"
+        tooltip="Donante activo" inactiveTooltip="No registra donaciones activas" />
+      <ActivityIcon active={member.is_server} icon={Hammer} label="Servidor" activeColor="text-teal-deep"
+        tooltip={committee ? `Servidor en ${committee}` : 'Servidor activo'}
+        inactiveTooltip="No sirve en ningún comité" />
+      <ActivityIcon active={attendanceActive} icon={CalendarCheck} label="Asistente" activeColor="text-navy"
+        tooltip={attendanceTooltip} inactiveTooltip="Sin asistencia activa a charlas" />
+      <ActivityIcon active={studyingActive} icon={BookOpen} label="Estudiante" activeColor="text-coral"
+        tooltip={member.current_study ? `Estudiando ${member.current_study}` : 'Estudiante activo'}
+        inactiveTooltip="No lleva ningún estudio ahora" />
       {/* A diferencia de los otros 4, este solo aparece si es dirigente activo
           (servidor activo en el comité Dirigentes). */}
       {member.es_dirigente && (
