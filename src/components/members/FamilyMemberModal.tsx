@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Search, UserCheck, UserPlus } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { validarAltaDePersona } from '@/lib/members/alta-persona'
+import { validarAltaDePersona, noLlevaCuenta } from '@/lib/members/alta-persona'
 import { DOCUMENT_TYPES, DOCUMENT_TYPE_LABEL } from '@/lib/cedula'
 import { calcAge } from '@/lib/format'
 import { Modal } from '@/components/shared/Modal'
@@ -65,6 +65,10 @@ export function FamilyMemberModal({ defaultLastName = '', existingIds = [], onAd
   }, [cedula, mode])
 
   const isMinor = birthDate ? calcAge(birthDate) < 18 : false
+  // El correo se le pide a todo el que pueda tener cuenta (12+), no solo a los
+  // adultos: antes el campo ni siquiera aparecía para un chico de 15, así que
+  // ese integrante quedaba sin forma de activar su acceso.
+  const sinCuenta = noLlevaCuenta(birthDate)
 
   function addLinked() {
     if (!found || !relation) { setError('Seleccioná la relación.'); return }
@@ -79,9 +83,11 @@ export function FamilyMemberModal({ defaultLastName = '', existingIds = [], onAd
     const chequeo = validarAltaDePersona({
       first_name: firstName, last_name: lastName || defaultLastName,
       cedula, birth_date: birthDate, document_type: documentType,
+      email, exigirCorreo: true,
     })
     if (!chequeo.ok) {
-      setError(chequeo.errores.cedula ?? chequeo.errores.first_name ?? chequeo.errores.last_name ?? null)
+      setError(chequeo.errores.cedula ?? chequeo.errores.email
+        ?? chequeo.errores.first_name ?? chequeo.errores.last_name ?? null)
       return
     }
     onAdd({
@@ -200,10 +206,16 @@ export function FamilyMemberModal({ defaultLastName = '', existingIds = [], onAd
                 )}
               </div>
             </div>
-            {!isMinor && (
+            {!sinCuenta && (
               <div className="grid grid-cols-2 gap-3">
                 <input value={phone} onChange={e => setPhone(e.target.value)} placeholder="Teléfono" className={cn(inputCls, 'font-body')} />
-                <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Correo" className={cn(inputCls, 'font-body')} />
+                <input
+                  type="email" value={email}
+                  onChange={e => { setEmail(e.target.value); setError(null) }}
+                  placeholder="Correo *"
+                  aria-label="Correo, obligatorio para crearle la cuenta"
+                  className={cn(inputCls, 'font-body')}
+                />
               </div>
             )}
             <select value={relation} onChange={e => { setRelation(e.target.value); setError(null) }} className={cn(inputCls, 'font-body')}>

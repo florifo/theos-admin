@@ -105,3 +105,53 @@ describe('otros tipos de documento', () => {
     expect(r.errores.cedula).toMatch(/documento es obligatorio/)
   })
 })
+
+// El correo hace falta para crearle la cuenta de acceso. Solo se exige donde el
+// alta es la única oportunidad de pedirlo (el check-in, con la persona
+// enfrente): en gestión se puede completar después.
+describe('correo obligatorio para crear la cuenta', () => {
+  const HOY_ = '2026-09-07'
+  const adulto = { first_name: 'Ana', last_name: 'Mora', cedula: '112345678', birth_date: '1990-01-01' }
+
+  it('sin exigirCorreo no cambia nada', () => {
+    const r = validarAltaDePersona(adulto, HOY_)
+    expect(r.exigeCorreo).toBe(false)
+    expect(r.ok).toBe(true)
+  })
+
+  it('con exigirCorreo, el adulto sin correo no pasa', () => {
+    const r = validarAltaDePersona({ ...adulto, exigirCorreo: true }, HOY_)
+    expect(r.exigeCorreo).toBe(true)
+    expect(r.ok).toBe(false)
+    expect(r.errores.email).toMatch(/obligatorio/)
+  })
+
+  it('con correo válido pasa', () => {
+    expect(validarAltaDePersona({ ...adulto, exigirCorreo: true, email: 'ana@correo.com' }, HOY_).ok).toBe(true)
+  })
+
+  it('un correo mal escrito se avisa aunque no fuera obligatorio', () => {
+    const r = validarAltaDePersona({ ...adulto, email: 'ana@@correo' }, HOY_)
+    expect(r.ok).toBe(false)
+    expect(r.errores.email).toMatch(/formato/)
+  })
+
+  // AUTH-1: por debajo de 12 no se crean cuentas, así que pedir el correo sería
+  // pedir un dato que no se va a usar.
+  it('a un menor de 12 no se le pide, aunque sí se le pidiera al resto', () => {
+    const r = validarAltaDePersona({
+      first_name: 'Luis', last_name: 'Mora', birth_date: '2018-01-01', exigirCorreo: true,
+    }, HOY_)
+    expect(r.exigeCorreo).toBe(false)
+    expect(r.errores.email).toBeUndefined()
+  })
+
+  // El umbral del correo (12) y el del documento (18) son distintos a propósito.
+  it('a un chico de 15 se le pide correo pero no cédula', () => {
+    const r = validarAltaDePersona({
+      first_name: 'Sofía', last_name: 'Mora', birth_date: '2011-01-01', exigirCorreo: true,
+    }, HOY_)
+    expect(r.exigeCedula).toBe(false)
+    expect(r.exigeCorreo).toBe(true)
+  })
+})

@@ -890,9 +890,12 @@ function NewPersonModal({ initialName, onClose, onCreated, onCheckedIn, persistC
   // el check-in a ella: es lo que resuelve la fila y lo que evita el duplicado.
   const [yaExiste, setYaExiste] = useState<{ id: string; name: string } | null>(null)
 
+  // exigirCorreo: en el check-in la persona está enfrente, es la única
+  // oportunidad de pedirle el correo — y sin correo no se le puede crear la
+  // cuenta de acceso. Los menores de 12 quedan fuera: no llevan cuenta (AUTH-1).
   const chequeo = validarAltaDePersona({
-    first_name: firstName, last_name: lastName, cedula,
-    birth_date: birthDate, document_type: documentType,
+    first_name: firstName, last_name: lastName, cedula, email,
+    birth_date: birthDate, document_type: documentType, exigirCorreo: true,
   })
   const esCedulaCR = documentType === 'cedula'
   const valid = chequeo.ok
@@ -947,6 +950,8 @@ function NewPersonModal({ initialName, onClose, onCreated, onCheckedIn, persistC
         cedula: cedula.trim() || null,
         document_type: documentType,
         birth_date: birthDate || null,
+        // Cada ficha nueva sale con su cuenta: el correo dispara la invitación
+        // para que la persona ponga contraseña y active el acceso.
         send_invite: !!email.trim(),
       })
 
@@ -1030,8 +1035,21 @@ function NewPersonModal({ initialName, onClose, onCreated, onCheckedIn, persistC
           <input id="np-phone" className={fieldCls} style={fieldStyle} value={phone} onChange={e => setPhone(e.target.value)} placeholder="8888-8888" />
         </div>
         <div className="space-y-1">
-          <label htmlFor="np-email" className={labelCls} style={labelStyle}>Correo</label>
-          <input id="np-email" type="email" className={fieldCls} style={fieldStyle} value={email} onChange={e => setEmail(e.target.value)} placeholder="correo@ejemplo.com" />
+          <label htmlFor="np-email" className={labelCls} style={labelStyle}>
+            Correo {chequeo.exigeCorreo ? '*' : '(opcional para menores de 12)'}
+          </label>
+          <input
+            id="np-email" type="email" className={fieldCls} style={fieldStyle}
+            value={email} onChange={e => setEmail(e.target.value)}
+            placeholder="correo@ejemplo.com"
+            aria-invalid={tocado && !!chequeo.errores.email}
+            aria-describedby={chequeo.errores.email ? 'np-email-err' : undefined}
+          />
+          {tocado && chequeo.errores.email && (
+            <p id="np-email-err" className="text-[13px] text-coral-soft font-body" role="alert">
+              {chequeo.errores.email}
+            </p>
+          )}
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
@@ -1125,7 +1143,7 @@ function NewPersonModal({ initialName, onClose, onCreated, onCheckedIn, persistC
         )}
 
         <p className="text-[13px] text-white/80 font-body">
-          Si tiene correo, se le enviará una invitación para completar su perfil y crear su contraseña.
+          Se le enviará una invitación al correo para que active su cuenta y complete su perfil.
         </p>
 
         <button

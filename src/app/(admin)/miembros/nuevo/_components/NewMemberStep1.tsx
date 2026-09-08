@@ -6,6 +6,7 @@ import { useSedes } from '@/lib/sedes'
 import { cn } from '@/lib/utils'
 import type { Member } from '@/types/member'
 import { DOCUMENT_TYPES, DOCUMENT_TYPE_LABEL } from '@/lib/cedula'
+import { noLlevaCuenta } from '@/lib/members/alta-persona'
 
 type Step1Data = {
   first_name: string
@@ -98,6 +99,7 @@ export function NewMemberStep1({
   onDismissDuplicate,
 }: Props) {
   const { activeSedes: SEDES } = useSedes()
+  const sinCuenta = noLlevaCuenta(data.birth_date)
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -204,7 +206,13 @@ export function NewMemberStep1({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Correo electrónico" htmlFor="member-email" error={errors.email}>
+          {/* Con el correo se le crea la cuenta de acceso; los menores de 12 no
+              llevan cuenta (AUTH-1) y por eso ahí es opcional. */}
+          <Field
+            label={`Correo electrónico${sinCuenta ? ' (opcional para menores de 12)' : ' *'}`}
+            htmlFor="member-email"
+            error={errors.email}
+          >
             <input
               id="member-email"
               type="email"

@@ -227,8 +227,12 @@ export default function NuevoMiembroPage() {
       first_name: data.first_name, last_name: data.last_name,
       cedula: data.cedula, birth_date: data.birth_date,
       document_type: data.document_type,
+      // Toda ficha nueva sale con cuenta de acceso, y la cuenta se crea con el
+      // correo. Los menores de 12 quedan fuera: no llevan cuenta (AUTH-1).
+      email: data.email, exigirCorreo: true,
     })
     if (chequeo.errores.cedula) e.cedula = chequeo.errores.cedula
+    if (chequeo.errores.email) e.email = chequeo.errores.email
     if (Object.keys(e).length > 0) {
       setErrors(e)
       return

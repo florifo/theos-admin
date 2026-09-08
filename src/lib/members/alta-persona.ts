@@ -22,8 +22,13 @@ import {
   isDocumentType, type DocumentType,
 } from '@/lib/cedula'
 
-/** Mayoría de edad en Costa Rica. */
+/** Mayoría de edad en Costa Rica. Es el umbral del DOCUMENTO. */
 export const MAYORIA_DE_EDAD = 18
+
+/** AUTH-1: por debajo de esta edad no se crean cuentas de acceso, así que
+ *  tampoco se les exige correo. Es un umbral DISTINTO al del documento y no es
+ *  un descuido: un chico de 15 puede tener correo y cuenta, y no tener cédula. */
+export const EDAD_MINIMA_PARA_CUENTA = 12
 
 /** Costa Rica es UTC-6 fijo. */
 const CR_OFFSET_MS = 6 * 60 * 60 * 1000
@@ -50,19 +55,35 @@ export function edadEnAnios(nacimiento: string, hoy: string = hoyCR()): number |
   return edad < 0 || edad > 130 ? null : edad
 }
 
-/** ¿La fecha de nacimiento dice que es menor de edad? Sin fecha usable: NO
- *  —no se asume que es menor para saltarse la cédula. */
-export function esMenorDeEdad(nacimiento: string | null | undefined, hoy: string = hoyCR()): boolean {
+/** ¿La fecha dice que la persona tiene menos de `anios`? Sin fecha usable: NO
+ *  —no se asume que es menor para saltarse un campo obligatorio. */
+export function esMenorDe(anios: number, nacimiento: string | null | undefined, hoy: string = hoyCR()): boolean {
   if (!nacimiento) return false
   const edad = edadEnAnios(nacimiento, hoy)
-  return edad !== null && edad < MAYORIA_DE_EDAD
+  return edad !== null && edad < anios
+}
+
+export function esMenorDeEdad(nacimiento: string | null | undefined, hoy: string = hoyCR()): boolean {
+  return esMenorDe(MAYORIA_DE_EDAD, nacimiento, hoy)
+}
+
+/** Demasiado chico para tener cuenta de acceso (AUTH-1). */
+export function noLlevaCuenta(nacimiento: string | null | undefined, hoy: string = hoyCR()): boolean {
+  return esMenorDe(EDAD_MINIMA_PARA_CUENTA, nacimiento, hoy)
 }
 
 export type AltaDePersona = {
   first_name: string
   last_name: string
   cedula?: string | null
+  email?: string | null
   birth_date?: string | null
+  /**
+   * Exigir correo para poder crearle la cuenta de acceso. Se pide donde el alta
+   * es la única oportunidad de capturarlo —el check-in, con la persona
+   * enfrente—; en pantallas de gestión se puede completar después.
+   */
+  exigirCorreo?: boolean
   /** INT-1: cedula | dni_nie | pasaporte | otro. Sin esto, el alta de alguien
    *  con pasaporte se rechazaría por "no tiene forma de cédula". Default:
    *  cédula de Costa Rica. */
@@ -72,10 +93,15 @@ export type AltaDePersona = {
 export type ResultadoAlta = {
   ok: boolean
   /** Mensaje por campo; la UI lo pinta debajo del input que corresponde. */
-  errores: Partial<Record<'first_name' | 'last_name' | 'cedula', string>>
+  errores: Partial<Record<'first_name' | 'last_name' | 'cedula' | 'email', string>>
   /** true cuando a esta persona sí se le exige documento. */
   exigeCedula: boolean
+  /** true cuando a esta persona sí se le exige correo (para crearle cuenta). */
+  exigeCorreo: boolean
 }
+
+// Mismo criterio de formato que /recuperar y que account-creation-rules.
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 export function validarAltaDePersona(p: AltaDePersona, hoy: string = hoyCR()): ResultadoAlta {
   const errores: ResultadoAlta['errores'] = {}
@@ -97,5 +123,15 @@ export function validarAltaDePersona(p: AltaDePersona, hoy: string = hoyCR()): R
     errores.cedula = documentFormatMessage(tipo)
   }
 
-  return { ok: Object.keys(errores).length === 0, errores, exigeCedula }
+  const exigeCorreo = !!p.exigirCorreo && !noLlevaCuenta(p.birth_date, hoy)
+  const email = (p.email ?? '').trim()
+  if (!email) {
+    if (exigeCorreo) {
+      errores.email = 'El correo es obligatorio: con él se le crea la cuenta de acceso.'
+    }
+  } else if (!EMAIL_RE.test(email)) {
+    errores.email = 'El correo no tiene un formato válido.'
+  }
+
+  return { ok: Object.keys(errores).length === 0, errores, exigeCedula, exigeCorreo }
 }
