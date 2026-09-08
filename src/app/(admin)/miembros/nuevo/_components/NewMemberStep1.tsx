@@ -135,7 +135,15 @@ export function NewMemberStep1({
         </select>
       </Field>
 
-      <Field label={data.document_type === 'cedula' || !data.document_type ? 'Cédula' : 'Número de documento'} htmlFor="member-cedula" error={errors.cedula}>
+      {/* Obligatorio salvo menores: la fecha de nacimiento de más abajo es la
+          que libera el campo (regla en lib/members/alta-persona.ts). */}
+      <Field
+        label={`${data.document_type === 'cedula' || !data.document_type ? 'Cédula' : 'Número de documento'}${
+          isMinor ? ' (opcional para menores)' : ' *'
+        }`}
+        htmlFor="member-cedula"
+        error={errors.cedula}
+      >
         <div className="relative">
           <input
             id="member-cedula"

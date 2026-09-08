@@ -17,7 +17,10 @@
  * pone la fecha —que además es un dato que se quiere tener— y el campo deja de
  * ser obligatorio solo.
  */
-import { isValidCedula, normalizeCedula, CEDULA_FORMAT_MESSAGE } from '@/lib/cedula'
+import {
+  isValidDocument, normalizeCedula, documentFormatMessage,
+  isDocumentType, type DocumentType,
+} from '@/lib/cedula'
 
 /** Mayoría de edad en Costa Rica. */
 export const MAYORIA_DE_EDAD = 18
@@ -60,6 +63,10 @@ export type AltaDePersona = {
   last_name: string
   cedula?: string | null
   birth_date?: string | null
+  /** INT-1: cedula | dni_nie | pasaporte | otro. Sin esto, el alta de alguien
+   *  con pasaporte se rechazaría por "no tiene forma de cédula". Default:
+   *  cédula de Costa Rica. */
+  document_type?: string | null
 }
 
 export type ResultadoAlta = {
@@ -75,14 +82,19 @@ export function validarAltaDePersona(p: AltaDePersona, hoy: string = hoyCR()): R
   if (!p.first_name?.trim()) errores.first_name = 'Falta el nombre.'
   if (!p.last_name?.trim()) errores.last_name = 'Faltan los apellidos.'
 
+  const tipo: DocumentType =
+    p.document_type && isDocumentType(p.document_type) ? p.document_type : 'cedula'
+
   const exigeCedula = !esMenorDeEdad(p.birth_date, hoy)
   const cedula = normalizeCedula(p.cedula ?? '')
   if (!cedula) {
     if (exigeCedula) {
-      errores.cedula = 'La cédula es obligatoria. Si es menor de edad, poné la fecha de nacimiento.'
+      errores.cedula = tipo === 'cedula'
+        ? 'La cédula es obligatoria. Si es menor de edad, poné la fecha de nacimiento.'
+        : 'El documento es obligatorio. Si es menor de edad, poné la fecha de nacimiento.'
     }
-  } else if (!isValidCedula(cedula)) {
-    errores.cedula = CEDULA_FORMAT_MESSAGE
+  } else if (!isValidDocument(tipo, cedula)) {
+    errores.cedula = documentFormatMessage(tipo)
   }
 
   return { ok: Object.keys(errores).length === 0, errores, exigeCedula }

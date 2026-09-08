@@ -9,6 +9,7 @@ import { CR_CANTONS, CR_DISTRICTS } from '@/data/costa-rica-geo'
 import { cn } from '@/lib/utils'
 import { REDIRECT_LONG_AFTER_SAVE_MS } from '@/lib/constants'
 import { FamilyMemberModal, type FamilyDraft } from '@/components/members/FamilyMemberModal'
+import { validarAltaDePersona, esMenorDeEdad } from '@/lib/members/alta-persona'
 import { NewMemberStep1 } from './_components/NewMemberStep1'
 import { NewMemberStep2 } from './_components/NewMemberStep2'
 import { NewMemberStep3 } from './_components/NewMemberStep3'
@@ -40,15 +41,6 @@ type Step1Data = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function calculateAge(dateStr: string): number {
-  const birth = new Date(dateStr)
-  const today = new Date()
-  let age = today.getFullYear() - birth.getFullYear()
-  const m = today.getMonth() - birth.getMonth()
-  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
-  return age
-}
-
 function draftName(d: FamilyDraft): string {
   return `${d.first_name} ${d.last_name}`.trim()
 }
@@ -56,7 +48,7 @@ function draftInitials(d: FamilyDraft): string {
   return ((d.first_name[0] ?? '?') + (d.last_name[0] ?? '?')).toUpperCase()
 }
 function draftIsMinor(d: FamilyDraft): boolean {
-  return d.kind === 'new' && !!d.birth_date && calculateAge(d.birth_date) < 18
+  return d.kind === 'new' && esMenorDeEdad(d.birth_date)
 }
 
 // ─── Step Indicator ───────────────────────────────────────────────────────────
@@ -156,7 +148,10 @@ export default function NuevoMiembroPage() {
 
   // ── Derived values ────────────────────────────────────────────────────────
 
-  const isMinor = data.birth_date ? calculateAge(data.birth_date) < 18 : false
+  // Una sola definición de "menor de edad": la del módulo que decide si el
+  // documento es obligatorio. Antes esto se calculaba acá con calculateAge y
+  // podía discrepar de la validación.
+  const isMinor = esMenorDeEdad(data.birth_date)
   const availableCantons = data.province ? (CR_CANTONS[data.province] ?? []) : []
   const availableDistricts = data.canton ? (CR_DISTRICTS[data.canton] ?? []) : []
 
@@ -226,6 +221,14 @@ export default function NuevoMiembroPage() {
     const e: Record<string, string> = {}
     if (!data.first_name.trim()) e.first_name = 'Requerido'
     if (!data.last_name.trim()) e.last_name = 'Requerido'
+    // Documento obligatorio salvo menores de edad — misma regla y mismo módulo
+    // que el alta desde el check-in y que el modal de familia.
+    const chequeo = validarAltaDePersona({
+      first_name: data.first_name, last_name: data.last_name,
+      cedula: data.cedula, birth_date: data.birth_date,
+      document_type: data.document_type,
+    })
+    if (chequeo.errores.cedula) e.cedula = chequeo.errores.cedula
     if (Object.keys(e).length > 0) {
       setErrors(e)
       return

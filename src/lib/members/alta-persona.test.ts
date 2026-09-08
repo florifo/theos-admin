@@ -79,3 +79,29 @@ describe('hoyCR', () => {
     expect(hoyCR(new Date('2026-09-08T02:00:00Z'))).toBe('2026-09-07')
   })
 })
+
+// El asistente de /miembros/nuevo acepta DNI/NIE y pasaporte además de cédula.
+// Sin el tipo, un pasaporte se rechazaría por "no tiene forma de cédula".
+describe('otros tipos de documento', () => {
+  const HOY_ = '2026-09-07'
+  const b = { first_name: 'Ana', last_name: 'Mora Vargas' }
+
+  it('acepta un DNI español válido y rechaza uno mal escrito', () => {
+    expect(validarAltaDePersona({ ...b, document_type: 'dni_nie', cedula: '12345678Z' }, HOY_).ok).toBe(true)
+    expect(validarAltaDePersona({ ...b, document_type: 'dni_nie', cedula: '112345678' }, HOY_).ok).toBe(false)
+  })
+
+  it('acepta un pasaporte, que no tiene forma de cédula', () => {
+    expect(validarAltaDePersona({ ...b, document_type: 'pasaporte', cedula: 'AB123456' }, HOY_).ok).toBe(true)
+  })
+
+  it('sin tipo se asume cédula de Costa Rica', () => {
+    expect(validarAltaDePersona({ ...b, cedula: '12345678Z' }, HOY_).ok).toBe(false)
+  })
+
+  it('el documento también es obligatorio para el adulto con pasaporte', () => {
+    const r = validarAltaDePersona({ ...b, document_type: 'pasaporte' }, HOY_)
+    expect(r.ok).toBe(false)
+    expect(r.errores.cedula).toMatch(/documento es obligatorio/)
+  })
+})
