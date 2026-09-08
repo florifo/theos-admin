@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo, useEffect } from 'react'
+import { textoCupos, porcentajeOcupado } from '@/lib/studies/cupos'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -1042,7 +1043,7 @@ function StudyCard({
 }
 
 function GroupRow({ group, onEnroll }: { group: EligibleGroup; onEnroll: () => void }) {
-  const fillPct = group.max_capacity > 0 ? Math.round((group.filled / group.max_capacity) * 100) : 0
+  const fillPct = porcentajeOcupado(group.filled, group.max_capacity)
 
   return (
     <div
@@ -1076,8 +1077,8 @@ function GroupRow({ group, onEnroll }: { group: EligibleGroup; onEnroll: () => v
         <div>
           <p className="text-[11px] text-navy-light/80 uppercase tracking-wider mb-0.5 font-display">Cupos</p>
           <div className="flex items-center gap-2">
-            <span className="text-[13px] text-navy font-body">
-              {group.spots_available}/{group.max_capacity}
+            <span className="text-[13px] text-navy font-body whitespace-nowrap">
+              {textoCupos(group.spots_available, group.max_capacity)}
             </span>
             <div className="flex-1 h-1.5 rounded-full bg-navy-light/10 overflow-hidden min-w-[40px]">
               <div
