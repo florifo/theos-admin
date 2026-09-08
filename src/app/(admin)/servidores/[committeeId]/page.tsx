@@ -50,17 +50,6 @@ export default function CommitteeDetailPage() {
     SERVER_COLUMNS.filter(c => c.defaultVisible),
   )
 
-  // Servidores del comité aplanados para exportar (mismas columnas que el listado general).
-  const flatServers = useMemo<FlatServer[]>(
-    () => (committee?.members ?? []).map(m => ({
-      member_id: m.member_id, name: m.name, initials: m.initials,
-      position: m.position, start_date: m.start_date, status: m.status,
-      committee: committee?.name ?? '', area: committee?.area ?? '',
-      leader_name: committee?.leader.name ?? '',
-      email: m.email ?? null, phone: m.phone ?? null, birth_date: m.birth_date ?? null,
-    })),
-    [committee],
-  )
 
   // Disconnect modal
   const [disconnectTarget, setDisconnectTarget] = useState<CommitteeServer | null>(null)
@@ -128,6 +117,26 @@ export default function CommitteeDetailPage() {
       return matchSearch && matchStatus
     }),
     [allCommitteeMembers, search, statusFilter]
+  )
+
+  // Servidores del comité aplanados para exportar (mismas columnas que el
+  // listado general).
+  //
+  // BUG 2026-09-08: esto mapeaba `committee.members`, o sea TODOS, mientras la
+  // pantalla mostraba `displayedMembers`. En Sede Meridiano Martes el encabezado
+  // decía 67 servidores y el archivo traía 84 filas: los 67 activos más los 17
+  // inactivos, que el filtro por defecto esconde. Quien exporta espera bajar lo
+  // que está viendo, no la tabla entera — y sin darse cuenta manda una lista con
+  // gente que ya no sirve ahí.
+  const flatServers = useMemo<FlatServer[]>(
+    () => displayedMembers.map(m => ({
+      member_id: m.member_id, name: m.name, initials: m.initials,
+      position: m.position, start_date: m.start_date, status: m.status,
+      committee: committee?.name ?? '', area: committee?.area ?? '',
+      leader_name: committee?.leader.name ?? '',
+      email: m.email ?? null, phone: m.phone ?? null, birth_date: m.birth_date ?? null,
+    })),
+    [displayedMembers, committee],
   )
 
   const activeCount = useMemo(
