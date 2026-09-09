@@ -23,6 +23,7 @@ import {
   MessageSquare,
   Trash2,
   Send,
+  Inbox,
 } from 'lucide-react'
 import { EmptyState } from '@/components/shared/EmptyState'
 import { Modal } from '@/components/shared/Modal'
@@ -509,28 +510,44 @@ export default function FormulariosPage() {
             {visible.map(form => {
               const CatIcon = CATEGORY_ICONS[form.category] ?? FileText
               return (
-                <li
-                  key={form.id}
-                  onClick={() => window.location.href = `/formularios/${form.id}`}
-                  className="flex items-center gap-3 px-4 py-3 active:bg-surface-low cursor-pointer"
-                >
-                  <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 bg-surface-low">
-                    <CatIcon size={16} className="text-navy-light/80" />
+                // En celular la tarjeta entera llevaba al EDITOR y no había
+                // ninguna forma de llegar a las respuestas: en escritorio hay
+                // una columna de acciones que en móvil no existe. Ahora son dos
+                // destinos explícitos, y de paso enlaces de verdad en vez de un
+                // div con onClick — se abren en pestaña nueva y funcionan con
+                // teclado, que antes no.
+                <li key={form.id} className="px-4 py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 bg-surface-low">
+                      <CatIcon size={16} className="text-navy-light/80" />
+                    </div>
+                    <Link
+                      href={`/formularios/${form.id}`}
+                      className="min-w-0 flex-1 -my-1 py-1 active:bg-surface-low rounded-lg"
+                    >
+                      <p className="truncate text-sm font-medium text-navy font-body">{form.name}</p>
+                      <p className="truncate text-[13px] text-navy-light/80 font-body">
+                        {CATEGORY_LABELS[form.category] ?? form.category}
+                      </p>
+                    </Link>
+                    <span
+                      className={cn(
+                        'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold font-display',
+                        FORM_WINDOW_BADGE[formWindowStatus(form)]
+                      )}
+                    >
+                      {FORM_WINDOW_LABEL[formWindowStatus(form)]}
+                    </span>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-navy font-body">{form.name}</p>
-                    <p className="truncate text-[13px] text-navy-light/80 font-body">
-                      {CATEGORY_LABELS[form.category] ?? form.category} · {form.responses_count} respuesta{form.responses_count !== 1 ? 's' : ''}
-                    </p>
-                  </div>
-                  <span
-                    className={cn(
-                      'shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold font-display',
-                      FORM_WINDOW_BADGE[formWindowStatus(form)]
-                    )}
+                  {/* El conteo ES el enlace a las respuestas: quien mira cuántas
+                      hay es porque las quiere ver. */}
+                  <Link
+                    href={`/formularios/${form.id}/respuestas`}
+                    className="mt-2 ml-12 inline-flex items-center gap-1.5 rounded-full border border-[var(--outline-variant)] px-3 py-1.5 text-[13px] text-navy-light active:bg-surface-low font-body"
                   >
-                    {FORM_WINDOW_LABEL[formWindowStatus(form)]}
-                  </span>
+                    <Inbox size={13} aria-hidden />
+                    Ver {form.responses_count} respuesta{form.responses_count !== 1 ? 's' : ''}
+                  </Link>
                 </li>
               )
             })}
